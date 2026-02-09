@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Hoodie shape -->
+  <path d="M35 60 L55 35 L75 50 L125 50 L145 35 L165 60 L155 75 L155 180 L45 180 L45 75 Z" fill="#756DF3" stroke="#5f57d4" stroke-width="2"/>
+  <!-- Hood -->
+  <path d="M55 35 Q100 20 145 35 Q130 55 100 55 Q70 55 55 35" fill="#6860e0" stroke="#5f57d4" stroke-width="2"/>
+  <!-- Pocket -->
+  <rect x="60" y="130" width="80" height="35" rx="5" fill="#6860e0"/>
+
+  <!-- MetalBear character on hoodie -->
+  <g transform="translate(100, 95) scale(0.4)">
+    <!-- Bear body -->
+    <ellipse cx="0" cy="30" rx="35" ry="40" fill="#f5f5f5"/>
+    <!-- Bear head -->
+    <circle cx="0" cy="-20" r="30" fill="#f5f5f5"/>
+    <!-- Ears -->
+    <circle cx="-22" cy="-42" r="12" fill="#f5f5f5"/>
+    <circle cx="22" cy="-42" r="12" fill="#f5f5f5"/>
+    <circle cx="-22" cy="-42" r="6" fill="#FFD18C"/>
+    <circle cx="22" cy="-42" r="6" fill="#FFD18C"/>
+    <!-- Eyes -->
+    <circle cx="-10" cy="-22" r="5" fill="#222"/>
+    <circle cx="10" cy="-22" r="5" fill="#222"/>
+    <circle cx="-8" cy="-24" r="2" fill="#fff"/>
+    <circle cx="12" cy="-24" r="2" fill="#fff"/>
+    <!-- Snout -->
+    <ellipse cx="0" cy="-8" rx="10" ry="7" fill="#FFD18C"/>
+    <!-- Nose -->
+    <ellipse cx="0" cy="-10" rx="4" ry="3" fill="#222"/>
+  </g>
+</svg>

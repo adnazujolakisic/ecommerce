@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Hoodie shape - grey -->
+  <path d="M35 60 L55 35 L75 50 L125 50 L145 35 L165 60 L155 75 L155 180 L45 180 L45 75 Z" fill="#444" stroke="#333" stroke-width="2"/>
+  <!-- Hood -->
+  <path d="M55 35 Q100 20 145 35 Q130 55 100 55 Q70 55 55 35" fill="#3a3a3a" stroke="#333" stroke-width="2"/>
+  <!-- Zipper -->
+  <rect x="97" y="50" width="6" height="130" fill="#888"/>
+  <rect x="98" y="50" width="4" height="130" fill="#666"/>
+  <!-- Zipper teeth -->
+  <g fill="#999">
+    <rect x="96" y="55" width="8" height="2"/>
+    <rect x="96" y="65" width="8" height="2"/>
+    <rect x="96" y="75" width="8" height="2"/>
+    <rect x="96" y="85" width="8" height="2"/>
+    <rect x="96" y="95" width="8" height="2"/>
+    <rect x="96" y="105" width="8" height="2"/>
+  </g>
+  <!-- Pockets -->
+  <path d="M50 130 L50 165 L95 165" fill="none" stroke="#333" stroke-width="2"/>
+  <path d="M150 130 L150 165 L105 165" fill="none" stroke="#333" stroke-width="2"/>
+
+  <!-- MetalBear logo left chest -->
+  <g transform="translate(70, 85) scale(0.25)">
+    <circle cx="0" cy="0" r="30" fill="#756DF3"/>
+    <circle cx="-22" cy="-22" r="12" fill="#756DF3"/>
+    <circle cx="22" cy="-22" r="12" fill="#756DF3"/>
+    <ellipse cx="0" cy="5" rx="18" ry="15" fill="#f5f5f5"/>
+    <circle cx="-8" cy="-2" r="4" fill="#222"/>
+    <circle cx="8" cy="-2" r="4" fill="#222"/>
+    <ellipse cx="0" cy="10" rx="8" ry="5" fill="#FFD18C"/>
+    <ellipse cx="0" cy="8" rx="3" ry="2" fill="#222"/>
+  </g>
+</svg>

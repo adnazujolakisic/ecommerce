@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Polo shape -->
+  <path d="M40 55 L60 35 L80 50 L120 50 L140 35 L160 55 L145 70 L145 175 L55 175 L55 70 Z" fill="#756DF3" stroke="#5f57d4" stroke-width="2"/>
+  <!-- Collar -->
+  <path d="M75 50 L85 65 L100 55 L115 65 L125 50" fill="#5f57d4" stroke="#4a49c9" stroke-width="2"/>
+  <!-- Button placket -->
+  <rect x="95" y="55" width="10" height="40" fill="#5f57d4"/>
+  <circle cx="100" cy="65" r="3" fill="#f5f5f5"/>
+  <circle cx="100" cy="80" r="3" fill="#f5f5f5"/>
+
+  <!-- Small MetalBear logo on chest -->
+  <g transform="translate(75, 85) scale(0.2)">
+    <circle cx="0" cy="0" r="30" fill="#f5f5f5"/>
+    <circle cx="-22" cy="-22" r="12" fill="#f5f5f5"/>
+    <circle cx="22" cy="-22" r="12" fill="#f5f5f5"/>
+    <circle cx="-8" cy="-5" r="5" fill="#222"/>
+    <circle cx="8" cy="-5" r="5" fill="#222"/>
+    <ellipse cx="0" cy="10" rx="10" ry="7" fill="#FFD18C"/>
+    <ellipse cx="0" cy="7" rx="4" ry="3" fill="#222"/>
+  </g>
+</svg>

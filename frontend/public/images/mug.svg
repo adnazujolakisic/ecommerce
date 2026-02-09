@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Mug body -->
+  <rect x="45" y="60" width="90" height="100" rx="8" fill="#f5f5f5" stroke="#ddd" stroke-width="2"/>
+  <!-- Mug handle -->
+  <path d="M135 80 Q165 80 165 110 Q165 140 135 140" fill="none" stroke="#ddd" stroke-width="8"/>
+  <path d="M135 80 Q160 80 160 110 Q160 140 135 140" fill="none" stroke="#f5f5f5" stroke-width="4"/>
+
+  <!-- Coffee inside -->
+  <rect x="50" y="65" width="80" height="15" rx="3" fill="#8B4513"/>
+
+  <!-- MetalBear on mug -->
+  <g transform="translate(90, 115) scale(0.4)">
+    <!-- Bear with coffee -->
+    <circle cx="0" cy="0" r="25" fill="#756DF3"/>
+    <circle cx="-18" cy="-18" r="10" fill="#756DF3"/>
+    <circle cx="18" cy="-18" r="10" fill="#756DF3"/>
+    <ellipse cx="0" cy="5" rx="15" ry="12" fill="#f5f5f5"/>
+    <circle cx="-8" cy="-2" r="4" fill="#222"/>
+    <circle cx="8" cy="-2" r="4" fill="#222"/>
+    <ellipse cx="0" cy="8" rx="6" ry="4" fill="#FFD18C"/>
+    <ellipse cx="0" cy="6" rx="3" ry="2" fill="#222"/>
+  </g>
+
+  <!-- Text -->
+  <text x="90" y="150" font-family="Arial, sans-serif" font-size="8" fill="#756DF3" text-anchor="middle">DEBUG WITH</text>
+  <text x="90" y="160" font-family="Arial, sans-serif" font-size="8" fill="#756DF3" text-anchor="middle">COFFEE</text>
+</svg>

@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Sock 1 -->
+  <g transform="translate(-10, 0)">
+    <!-- Cuff -->
+    <rect x="50" y="40" width="35" height="25" rx="3" fill="#756DF3"/>
+    <!-- Leg -->
+    <rect x="50" y="65" width="35" height="60" fill="#f5f5f5"/>
+    <!-- Heel -->
+    <path d="M50 125 L50 150 Q50 170 70 170 L85 170 L85 125" fill="#756DF3"/>
+    <!-- Foot -->
+    <path d="M85 150 L85 170 Q120 175 125 160 Q130 145 115 140 L85 140" fill="#f5f5f5"/>
+    <!-- Toe -->
+    <ellipse cx="120" cy="155" rx="15" ry="18" fill="#756DF3"/>
+    <!-- Bear pattern -->
+    <circle cx="67" cy="95" r="8" fill="#756DF3" opacity="0.3"/>
+    <circle cx="62" cy="88" r="3" fill="#756DF3" opacity="0.3"/>
+    <circle cx="72" cy="88" r="3" fill="#756DF3" opacity="0.3"/>
+  </g>
+
+  <!-- Sock 2 -->
+  <g transform="translate(30, 10)">
+    <!-- Cuff -->
+    <rect x="70" y="35" width="35" height="25" rx="3" fill="#FFD18C"/>
+    <!-- Leg -->
+    <rect x="70" y="60" width="35" height="60" fill="#f5f5f5"/>
+    <!-- Heel -->
+    <path d="M70 120 L70 145 Q70 165 90 165 L105 165 L105 120" fill="#FFD18C"/>
+    <!-- Foot -->
+    <path d="M105 145 L105 165 Q140 170 145 155 Q150 140 135 135 L105 135" fill="#f5f5f5"/>
+    <!-- Toe -->
+    <ellipse cx="140" cy="150" rx="15" ry="18" fill="#FFD18C"/>
+    <!-- Bear pattern -->
+    <circle cx="87" cy="90" r="8" fill="#756DF3" opacity="0.3"/>
+    <circle cx="82" cy="83" r="3" fill="#756DF3" opacity="0.3"/>
+    <circle cx="92" cy="83" r="3" fill="#756DF3" opacity="0.3"/>
+  </g>
+</svg>

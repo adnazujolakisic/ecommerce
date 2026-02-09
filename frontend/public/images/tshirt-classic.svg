@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- T-shirt shape -->
+  <path d="M40 50 L60 30 L80 45 L120 45 L140 30 L160 50 L145 65 L145 170 L55 170 L55 65 Z" fill="#222222" stroke="#111" stroke-width="2"/>
+  <!-- Collar -->
+  <path d="M80 45 Q100 55 120 45" fill="none" stroke="#111" stroke-width="2"/>
+
+  <!-- MetalBear character on shirt -->
+  <g transform="translate(100, 105) scale(0.5)">
+    <!-- Bear body -->
+    <ellipse cx="0" cy="30" rx="35" ry="40" fill="#f5f5f5"/>
+    <!-- Bear head -->
+    <circle cx="0" cy="-20" r="30" fill="#f5f5f5"/>
+    <!-- Ears -->
+    <circle cx="-22" cy="-42" r="12" fill="#f5f5f5"/>
+    <circle cx="22" cy="-42" r="12" fill="#f5f5f5"/>
+    <circle cx="-22" cy="-42" r="6" fill="#756DF3"/>
+    <circle cx="22" cy="-42" r="6" fill="#756DF3"/>
+    <!-- Eyes -->
+    <circle cx="-10" cy="-22" r="5" fill="#222"/>
+    <circle cx="10" cy="-22" r="5" fill="#222"/>
+    <!-- Eye shine -->
+    <circle cx="-8" cy="-24" r="2" fill="#fff"/>
+    <circle cx="12" cy="-24" r="2" fill="#fff"/>
+    <!-- Snout -->
+    <ellipse cx="0" cy="-8" rx="10" ry="7" fill="#756DF3"/>
+    <!-- Nose -->
+    <ellipse cx="0" cy="-10" rx="4" ry="3" fill="#222"/>
+    <!-- Belly patch -->
+    <ellipse cx="0" cy="35" rx="20" ry="25" fill="#756DF3" opacity="0.3"/>
+  </g>
+</svg>
