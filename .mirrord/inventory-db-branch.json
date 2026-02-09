@@ -1,0 +1,39 @@
+{
+  "target": {
+    "path": {
+      "deployment": "inventory"
+    },
+    "namespace": "metalmart"
+  },
+  "feature": {
+    "network": {
+      "incoming": "mirror",
+      "outgoing": true
+    },
+    "fs": "local",
+    "env": true,
+    "db_branches": [
+      {
+        "id": "inventory-debug-session",
+        "type": "pg",
+        "version": "16",
+        "name": "inventory",
+        "ttl_secs": 300,
+        "creation_timeout_secs": 60,
+        "connection": {
+          "url": {
+            "type": "env",
+            "variable": "DATABASE_URL"
+          }
+        },
+        "copy": {
+          "mode": "all"
+        }
+      }
+    ]
+  },
+  "agent": {
+    "namespace": "metalmart"
+  },
+  "operator": true
+}

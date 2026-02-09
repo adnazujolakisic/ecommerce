@@ -1,0 +1,29 @@
+{
+  "target": {
+    "path": {
+      "deployment": "order-processor"
+    },
+    "namespace": "metalmart"
+  },
+  "feature": {
+    "network": {
+      "incoming": "mirror",
+      "outgoing": {
+        "tcp": true,
+        "udp": true
+      },
+      "dns": true
+    },
+    "fs": "local",
+    "env": true,
+    "split_queues": {
+      "order-created": {
+        "queue_type": "Kafka",
+        "message_filter": {
+          "customer_email": ".*@metalbear.com"
+        }
+      }
+    }
+  },
+  "operator": true
+}

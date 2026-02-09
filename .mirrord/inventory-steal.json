@@ -1,0 +1,21 @@
+{
+  "target": {
+    "path": {
+      "deployment": "inventory"
+    },
+    "namespace": "metalmart"
+  },
+  "feature": {
+    "network": {
+      "incoming": "steal",
+      "outgoing": {
+        "tcp": true,
+        "udp": true
+      },
+      "dns": true
+    },
+    "fs": "local",
+    "env": true
+  },
+  "operator": true
+}
