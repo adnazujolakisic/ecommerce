@@ -93,12 +93,24 @@ docker-compose build
 
 # 3. Tag images
 echo "3. Tagging images for K8s..."
-docker tag metalmart-catalogue:latest metalmart/catalogue:latest
-docker tag metalmart-inventory:latest metalmart/inventory:latest
-docker tag metalmart-checkout:latest metalmart/checkout:latest
-docker tag metalmart-order:latest metalmart/order:latest
-docker tag metalmart-order-processor:latest metalmart/order-processor:latest
-docker tag metalmart-frontend:latest metalmart/frontend:latest
+# Docker Compose names images as <directory-name>-<service-name>
+# Get the project name (directory name) from docker-compose
+PROJECT_NAME=$(basename $(pwd) | tr '[:upper:]' '[:lower:]')
+
+# Tag images - try both ecommerce and metalmart prefixes for compatibility
+for service in catalogue inventory checkout order order-processor frontend; do
+  # Try ecommerce prefix first (current directory name)
+  if docker image inspect "${PROJECT_NAME}-${service}:latest" &>/dev/null; then
+    docker tag "${PROJECT_NAME}-${service}:latest" "metalmart/${service}:latest"
+    echo "   Tagged ${PROJECT_NAME}-${service} -> metalmart/${service}"
+  # Fallback to metalmart prefix (old naming)
+  elif docker image inspect "metalmart-${service}:latest" &>/dev/null; then
+    docker tag "metalmart-${service}:latest" "metalmart/${service}:latest"
+    echo "   Tagged metalmart-${service} -> metalmart/${service}"
+  else
+    echo "   ⚠️  Warning: Image for ${service} not found"
+  fi
+done
 
 # 4. Deploy infrastructure first
 echo "4. Deploying infrastructure (secrets, postgres, kafka)..."

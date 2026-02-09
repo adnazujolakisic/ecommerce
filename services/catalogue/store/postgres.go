@@ -71,7 +71,7 @@ func (s *PostgresStore) Seed() error {
 			name:        "MetalBear Classic T-Shirt",
 			description: "Classic black t-shirt featuring the iconic MetalBear logo. Made from 100% organic cotton for maximum comfort during those long debugging sessions.",
 			price:       29.99,
-			imageURL:    "/images/tshirt-model-1.jpg",
+			imageURL:    "/images/tshirt-classic.svg",
 			category:    "t-shirts",
 		},
 		{
