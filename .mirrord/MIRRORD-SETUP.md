@@ -7,10 +7,7 @@ Complete guide to install and configure Mirrord operator for Kafka queue splitti
 1. **Mirrord CLI installed:**
    ```bash
    # macOS
-   brew install metalbear-co/tap/mirrord
-   
-   # Or download from: https://github.com/metalbear-co/mirrord/releases
-   ```
+   brew install metalbear-co/mirrord/mirrord
 
 2. **Minikube running:**
    ```bash
@@ -32,7 +29,7 @@ Complete guide to install and configure Mirrord operator for Kafka queue splitti
 
 ---
 
-## Step 1: Add Mirrord Helm Repository
+## Step 1: Add/Update Mirrord Helm Repository
 
 ```bash
 helm repo add mirrord https://helm.metalbear.co
@@ -70,12 +67,6 @@ kubectl get pods -n mirrord -w
 # Press Ctrl+C when ready
 ```
 
-**Or wait with timeout:**
-```bash
-kubectl wait --for=condition=ready pod -l app=mirrord-operator -n mirrord --timeout=120s
-```
-
----
 
 ## Step 4: Verify Operator Installation
 
@@ -119,11 +110,11 @@ kubectl get crd | grep mirrord
 ## Step 6: Verify Kafka Resources
 
 ```bash
-# Check Kafka client config
-kubectl get mirrordkafkaclientconfig -n metalmart
+# Check Kafka client config (note: plural name and mirrord namespace)
+kubectl get mirrordkafkaclientconfigs -n mirrord
 
-# Check Kafka topics consumer
-kubectl get mirrordkafkatopicsconsumer -n metalmart
+# Check Kafka topics consumer (note: plural name)
+kubectl get mirrordkafkatopicsconsumers -n metalmart
 ```
 
 ---
@@ -136,7 +127,7 @@ kubectl get mirrordkafkatopicsconsumer -n metalmart
 - [ ] Operator installed (`kubectl get pods -n mirrord`)
 - [ ] Operator running (`mirrord operator status` shows )
 - [ ] Kafka CRDs applied (`kubectl get crd | grep mirrord`)
-- [ ] Kafka resources created (`kubectl get mirrordkafkaclientconfig -n metalmart`)
+- [ ] Kafka resources created (`kubectl get mirrordkafkaclientconfigs -n mirrord`)
 
 ---
 
