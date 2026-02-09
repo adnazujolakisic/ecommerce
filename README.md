@@ -1,6 +1,20 @@
 # MetalMart
 
-A microservices e-commerce application designed as a demo platform for Mirrord features.
+A microservices e-commerce application designed as a demo platform for Mirrord features (Kafka queue splitting, database branching, filtering, steal mode, and mirror mode).
+
+## Architecture
+
+**Services (Go microservices):**
+- `catalogue` (8081) - Product catalog
+- `inventory` (8082) - Stock management
+- `checkout` (8083) - Cart processing
+- `order` (8084) - Order creation, publishes to Kafka
+- `order-processor` - Kafka consumer, processes orders asynchronously
+
+**Infrastructure:**
+- PostgreSQL - Databases: catalogue, inventory, orders
+- Kafka + Zookeeper - Async messaging for order processing
+- Frontend - React + TypeScript + Vite
 
 ## Prerequisites
 
@@ -12,15 +26,17 @@ Before running the setup script, ensure you have the following installed:
 2. **docker-compose** - Usually included with Docker Desktop
    - Verify: `docker-compose --version`
 
-3. **Minikube** - Local Kubernetes cluster
+3. **Minikube** - Local Kubernetes cluster (for Kubernetes deployment)
    - macOS: `brew install minikube`
    - Other platforms: [Minikube Installation Guide](https://minikube.sigs.k8s.io/docs/start/)
 
-4. **kubectl** - Kubernetes command-line tool
+4. **kubectl** - Kubernetes command-line tool (for Kubernetes deployment)
    - macOS: `brew install kubectl`
    - Other platforms: [kubectl Installation Guide](https://kubernetes.io/docs/tasks/tools/)
 
 ## Quick Start
+
+### Option 1: Kubernetes (Minikube) - Recommended
 
 Once all prerequisites are installed, run:
 
@@ -38,10 +54,7 @@ This script will:
 - ✅ Seed inventory data
 - ✅ Verify deployment
 
-## Access the Application
-
-After setup completes:
-
+**Access the application:**
 ```bash
 # Access the frontend
 minikube service frontend -n metalmart
@@ -50,10 +63,53 @@ minikube service frontend -n metalmart
 kubectl get pods -n metalmart
 ```
 
+### Option 2: Docker Compose (Local Development)
+
+For quick local testing without Kubernetes:
+
+```bash
+# Start everything
+docker-compose up --build -d
+
+# Access frontend
+open http://localhost:3000
+
+# Stop everything
+docker-compose down
+```
+
+**URLs:**
+- Frontend: http://localhost:3000
+- Catalogue API: http://localhost:8081
+- Inventory API: http://localhost:8082
+- Checkout API: http://localhost:8083
+- Order API: http://localhost:8084
+
+### Option 3: Deploy to GKE (Google Kubernetes Engine)
+
+For production deployment:
+
+```bash
+export GCP_PROJECT_ID=your-project-id
+./scripts/helpers/deploy-gke.sh
+```
+
+See [GKE-DEPLOYMENT.md](GKE-DEPLOYMENT.md) for detailed instructions.
+
+## Helper Scripts
+
+- `./scripts/helpers/start-fresh.sh` - Complete setup from scratch
+- `./scripts/helpers/rebuild-frontend.sh` - Rebuild frontend after changes
+- `./scripts/helpers/fix-order-status.sh` - Fix when order status stops updating
+- `./scripts/helpers/deploy-gke.sh` - Deploy to Google Kubernetes Engine
+
+See [scripts/helpers/README.md](scripts/helpers/README.md) for more details.
+
 ## Documentation
 
 - **[DEVELOPMENT.md](DEVELOPMENT.md)** - Complete development guide
 - **[PROJECT-CONTEXT.md](PROJECT-CONTEXT.md)** - Project overview and architecture
+- **[GKE-DEPLOYMENT.md](GKE-DEPLOYMENT.md)** - GKE deployment guide
 - **[MIRRORD-SETUP.md](MIRRORD-SETUP.md)** - Mirrord operator setup (optional)
 - **[scripts/helpers/README.md](scripts/helpers/README.md)** - Helper scripts documentation
 
