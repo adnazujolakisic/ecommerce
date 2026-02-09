@@ -105,21 +105,5 @@ See [GKE-DEPLOYMENT.md](GKE-DEPLOYMENT.md) for detailed instructions.
 
 See [scripts/helpers/README.md](scripts/helpers/README.md) for more details.
 
-## Documentation
 
-- **[DEVELOPMENT.md](DEVELOPMENT.md)** - Complete development guide
-- **[GKE-DEPLOYMENT.md](GKE-DEPLOYMENT.md)** - GKE deployment guide
-- **[MIRRORD-SETUP.md](MIRRORD-SETUP.md)** - Mirrord operator setup (optional)
-- **[scripts/helpers/README.md](scripts/helpers/README.md)** - Helper scripts documentation
 
-## Troubleshooting
-
-If you encounter issues:
-
-1. **Check prerequisites**: The script will verify all required tools are installed
-2. **Check Docker**: Make sure Docker Desktop is running
-3. **Check pods**: `kubectl get pods -n metalmart`
-4. **View logs**: `kubectl logs -n metalmart deployment/<service-name>`
-5. **Describe pod**: `kubectl describe pod <pod-name> -n metalmart`
-
-For more help, see [DEVELOPMENT.md](DEVELOPMENT.md).
