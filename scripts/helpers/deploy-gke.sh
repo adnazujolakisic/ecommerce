@@ -9,8 +9,17 @@ set -e
 # 4. Set GCP_PROJECT_ID environment variable
 
 if [ -z "$GCP_PROJECT_ID" ]; then
-  echo "Error: GCP_PROJECT_ID environment variable not set"
-  echo "Usage: export GCP_PROJECT_ID=your-project-id && ./scripts/deploy-gke.sh"
+  echo "❌ Error: GCP_PROJECT_ID environment variable not set"
+  echo ""
+  echo "Usage:"
+  echo "  export GCP_PROJECT_ID=your-project-id"
+  echo "  ./scripts/helpers/deploy-gke.sh"
+  echo ""
+  echo "Prerequisites:"
+  echo "  1. gcloud CLI installed and authenticated: gcloud auth login"
+  echo "  2. kubectl configured for your GKE cluster"
+  echo "  3. Docker configured to push to GCR: gcloud auth configure-docker"
+  echo "  4. GKE cluster created and running"
   exit 1
 fi
 
@@ -26,13 +35,16 @@ echo "2. Building Docker images..."
 docker-compose build
 
 echo "3. Tagging and pushing images to GCR..."
-# Tag and push each service
-docker tag metalmart-catalogue:latest gcr.io/$GCP_PROJECT_ID/metalmart/catalogue:latest
-docker tag metalmart-inventory:latest gcr.io/$GCP_PROJECT_ID/metalmart/inventory:latest
-docker tag metalmart-checkout:latest gcr.io/$GCP_PROJECT_ID/metalmart/checkout:latest
-docker tag metalmart-order:latest gcr.io/$GCP_PROJECT_ID/metalmart/order:latest
-docker tag metalmart-order-processor:latest gcr.io/$GCP_PROJECT_ID/metalmart/order-processor:latest
-docker tag metalmart-frontend:latest gcr.io/$GCP_PROJECT_ID/metalmart/frontend:latest
+# Get project name (directory name) for image names
+PROJECT_NAME=$(basename $(pwd) | tr '[:upper:]' '[:lower:]')
+
+# Tag and push each service (using actual docker-compose image names)
+docker tag ${PROJECT_NAME}-catalogue:latest gcr.io/$GCP_PROJECT_ID/metalmart/catalogue:latest
+docker tag ${PROJECT_NAME}-inventory:latest gcr.io/$GCP_PROJECT_ID/metalmart/inventory:latest
+docker tag ${PROJECT_NAME}-checkout:latest gcr.io/$GCP_PROJECT_ID/metalmart/checkout:latest
+docker tag ${PROJECT_NAME}-order:latest gcr.io/$GCP_PROJECT_ID/metalmart/order:latest
+docker tag ${PROJECT_NAME}-order-processor:latest gcr.io/$GCP_PROJECT_ID/metalmart/order-processor:latest
+docker tag ${PROJECT_NAME}-frontend:latest gcr.io/$GCP_PROJECT_ID/metalmart/frontend:latest
 
 docker push gcr.io/$GCP_PROJECT_ID/metalmart/catalogue:latest
 docker push gcr.io/$GCP_PROJECT_ID/metalmart/inventory:latest
