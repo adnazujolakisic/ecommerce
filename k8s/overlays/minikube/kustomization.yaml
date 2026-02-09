@@ -1,0 +1,40 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+patches:
+  - patch: |-
+      - op: replace
+        path: /spec/type
+        value: NodePort
+    target:
+      kind: Service
+      name: frontend
+  - patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Never
+    target:
+      kind: Deployment
+
+images:
+  - name: metalmart/catalogue
+    newName: metalmart-catalogue
+    newTag: latest
+  - name: metalmart/inventory
+    newName: metalmart-inventory
+    newTag: latest
+  - name: metalmart/checkout
+    newName: metalmart-checkout
+    newTag: latest
+  - name: metalmart/order
+    newName: metalmart-order
+    newTag: latest
+  - name: metalmart/order-processor
+    newName: metalmart-order-processor
+    newTag: latest
+  - name: metalmart/frontend
+    newName: metalmart-frontend
+    newTag: latest
