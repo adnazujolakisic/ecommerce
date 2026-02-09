@@ -1,0 +1,27 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+# Note: PROJECT_ID will be replaced by deploy-gke.sh script
+# Or set it manually: sed -i 's/PROJECT_ID/your-project-id/g' k8s/overlays/gke/kustomization.yaml
+images:
+  - name: metalmart/catalogue
+    newName: gcr.io/PROJECT_ID/metalmart/catalogue
+    newTag: latest
+  - name: metalmart/inventory
+    newName: gcr.io/PROJECT_ID/metalmart/inventory
+    newTag: latest
+  - name: metalmart/checkout
+    newName: gcr.io/PROJECT_ID/metalmart/checkout
+    newTag: latest
+  - name: metalmart/order
+    newName: gcr.io/PROJECT_ID/metalmart/order
+    newTag: latest
+  - name: metalmart/order-processor
+    newName: gcr.io/PROJECT_ID/metalmart/order-processor
+    newTag: latest
+  - name: metalmart/frontend
+    newName: gcr.io/PROJECT_ID/metalmart/frontend
+    newTag: latest
