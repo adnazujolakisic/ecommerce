@@ -1,0 +1,30 @@
+apiVersion: queues.mirrord.metalbear.co/v1alpha
+kind: MirrordKafkaClientConfig
+metadata:
+  name: kafka-client-config
+  namespace: mirrord
+spec:
+  properties:
+    - name: bootstrap.servers
+      value: kafka.metalmart.svc.cluster.local:9092
+---
+apiVersion: queues.mirrord.metalbear.co/v1alpha
+kind: MirrordKafkaTopicsConsumer
+metadata:
+  name: order-processor-consumer
+  namespace: metalmart
+spec:
+  consumerApiVersion: apps/v1
+  consumerKind: Deployment
+  consumerName: order-processor
+  topics:
+    - id: order-created
+      clientConfig: kafka-client-config
+      nameSources:
+        - directEnvVar:
+            container: order-processor
+            variable: KAFKA_TOPIC
+      groupIdSources:
+        - directEnvVar:
+            container: order-processor
+            variable: KAFKA_GROUP_ID
