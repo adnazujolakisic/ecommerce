@@ -73,6 +73,7 @@ secrets.yaml.local
 *.prof
 coverage.txt
 coverage.html
+__debug_bin*
 
 # Frontend build
 frontend/dist/

@@ -6,13 +6,31 @@ Complete guide for demonstrating Mirrord features with MetalMart - for customer 
 
 ## Quick Start (Customer Demo)
 
-**The 3-Step Demo:**
+**Two Ways to Demo:**
 
-1. **Start Load Generator** (Terminal 1)
+### Option A: Manual Order (Recommended - Better for customer demos)
+1. **Start Mirrord** (Terminal 1)
+2. **Open Frontend** and place order manually
+3. **Breakpoint hits immediately** 🎯
+
+### Option B: Load Generator (For high volume demos)
+1. **Start Load Generator** (Terminal 1) - creates 20 orders/sec
 2. **Start Mirrord** (Terminal 2)  
-3. **Show Breakpoint Hit** 🎯
+3. **Breakpoint hits within 5-10 seconds** 🎯
 
-**Commands:**
+**Quick Commands:**
+
+**Option A - Manual:**
+```bash
+# Terminal 1: Start Mirrord
+cd /Users/adna/Desktop/ecommerce/services/order-processor
+mirrord exec -f ../../.mirrord/order-processor.json -- go run .
+
+# Then open frontend and place order (email pre-filled with demo@metalbear.com)
+minikube service frontend -n metalmart
+```
+
+**Option B - Load Generator:**
 ```bash
 # Terminal 1: Generate load
 cd /Users/adna/Desktop/ecommerce
@@ -25,9 +43,8 @@ mirrord exec -f ../../.mirrord/order-processor.json -- go run .
 ```
 
 **What happens:**
-- Load generator creates 20 orders/sec (all with `@metalbear.com` emails)
-- Mirrord routes matching messages to your local debugger
-- Breakpoint hits within 5-10 seconds
+- Messages with `@metalbear.com` emails route to your local debugger
+- Breakpoint hits (immediately for manual, 5-10 sec for load generator)
 - You see real order data from the cluster's Kafka
 
 ---
@@ -80,6 +97,8 @@ kubectl get pods -n mirrord
 
 ### Demo Steps
 
+**Option 1: Load Generator (Automated - for high volume demos)**
+
 **Step 1: Start Load Generator (Terminal 1)**
 
 ```bash
@@ -103,17 +122,56 @@ go run scripts/load-generator.go 20 120
 
 **Step 2: Start Mirrord Debug Session (Terminal 2)**
 
+**Where to set breakpoints (to show status progression):**
+
+Set breakpoints at these lines in `services/order-processor/main.go`:
+
+1. **Line 127** - Entry point (message received)
+   ```go
+   func (p *OrderProcessor) ProcessOrder(event OrderCreatedEvent) error {
+   ```
+
+2. **Line 164** - Status update (will hit 3 times: processing → confirmed → shipped)
+   ```go
+   if err := p.updateOrderStatus(event.OrderID, step.status); err != nil {
+   ```
+
+**How to set breakpoints:**
+- Click to the left of the line number (red dot appears)
+- Or press F9 on that line
+- Set both breakpoints to see the full flow
+
+**Option A: Command line (no breakpoint needed - just watch logs)**
 ```bash
 cd /Users/adna/Desktop/ecommerce/services/order-processor
-
-# Option A: Command line
 mirrord exec -f ../../.mirrord/order-processor.json -- go run .
-
-# Option B: VSCode Debugger
-# 1. Set breakpoint at line 127 in main.go
-# 2. Use launch config with mirrord
-# 3. Start debugging
 ```
+
+**Option B: VSCode Debugger (with breakpoints - recommended for demos)**
+
+**Set these breakpoints to show status progression:**
+
+1. **Line 127** - Entry point (message received)
+   ```go
+   func (p *OrderProcessor) ProcessOrder(event OrderCreatedEvent) error {
+   ```
+   - Click left of line number (red dot) or press F9
+
+2. **Line 164** - Status update (hits 3 times: processing → confirmed → shipped)
+   ```go
+   if err := p.updateOrderStatus(event.OrderID, step.status); err != nil {
+   ```
+   - Click left of line number (red dot) or press F9
+
+**Demo flow with breakpoints:**
+1. Start debugging - breakpoint at line 127 hits first
+2. Show customer the order data in Variables panel
+3. Continue (F5) - breakpoint at line 164 hits (status = "processing")
+4. Continue (F5) - breakpoint at line 164 hits again (status = "confirmed")
+5. Continue (F5) - breakpoint at line 164 hits again (status = "shipped")
+6. Continue (F5) - order processing complete
+
+This shows the full lifecycle: Message → Processing → Confirmed → Shipped
 
 **What happens:**
 1. Mirrord connects to the cluster
@@ -131,6 +189,112 @@ kubectl logs -n metalmart deployment/order-processor --tail=20
 
 # Check your local terminal (should show @metalbear.com orders)
 ```
+
+---
+
+**Option 2: Manual Order Placement (Recommended for customer demos)**
+
+**Better for demos:** More controlled, customer sees the full flow, easier to explain.
+
+**Step 1: Start Mirrord Debug Session (Terminal 1)**
+
+**Where to set breakpoints (to show status progression):**
+
+Set breakpoints at these lines in `services/order-processor/main.go`:
+
+1. **Line 127** - Entry point (message received)
+   ```go
+   func (p *OrderProcessor) ProcessOrder(event OrderCreatedEvent) error {
+   ```
+
+2. **Line 164** - Status update (will hit 3 times: processing → confirmed → shipped)
+   ```go
+   if err := p.updateOrderStatus(event.OrderID, step.status); err != nil {
+   ```
+
+**How to set breakpoints:**
+- Click to the left of the line number (red dot appears)
+- Or press F9 on that line
+- Set both breakpoints to see the full flow
+
+**Option A: Command line**
+```bash
+cd /Users/adna/Desktop/ecommerce/services/order-processor
+mirrord exec -f ../../.mirrord/order-processor.json -- go run .
+```
+
+**Option B: VSCode Debugger (with breakpoints - recommended for demos)**
+
+**Set these breakpoints to show status progression:**
+
+1. **Line 127** - Entry point (message received)
+   ```go
+   func (p *OrderProcessor) ProcessOrder(event OrderCreatedEvent) error {
+   ```
+   - Click left of line number (red dot) or press F9
+
+2. **Line 164** - Status update (hits 3 times: processing → confirmed → shipped)
+   ```go
+   if err := p.updateOrderStatus(event.OrderID, step.status); err != nil {
+   ```
+   - Click left of line number (red dot) or press F9
+
+**Demo flow with breakpoints:**
+1. Start debugging - breakpoint at line 127 hits first
+2. Show customer the order data in Variables panel
+3. Continue (F5) - breakpoint at line 164 hits (status = "processing")
+4. Continue (F5) - breakpoint at line 164 hits again (status = "confirmed")
+5. Continue (F5) - breakpoint at line 164 hits again (status = "shipped")
+6. Continue (F5) - order processing complete
+
+This shows the full lifecycle: Message → Processing → Confirmed → Shipped
+
+Wait for: "Order processor started, waiting for messages..."
+
+**Step 2: Open Frontend and Place Order**
+
+```bash
+# Get frontend URL
+minikube service frontend -n metalmart
+# Or if using port-forward:
+kubectl port-forward -n metalmart svc/frontend 3000:80
+```
+
+**In the browser:**
+1. Open the frontend (http://localhost:3000 or the minikube service URL)
+2. Add items to cart
+3. Go to checkout
+4. **Email is pre-filled with `demo@metalbear.com`** (matches your filter)
+5. Click "Place Order"
+
+**Step 3: Breakpoint Hits!**
+
+- Within 1-2 seconds, your breakpoint at line 127 should hit
+- Show the customer the real order data in Variables panel
+- Explain how the message came from the cluster's Kafka
+
+**Step 4: Show Status Progression**
+
+- Continue execution (F5 or click Continue button)
+- Breakpoint at line 164 will hit 3 times:
+  1. **First hit:** Check Variables panel → `step.status = "processing"`
+     - Point out: "Now updating status to processing"
+     - Continue (F5)
+  2. **Second hit:** Check Variables panel → `step.status = "confirmed"`
+     - Point out: "Status updated to confirmed"
+     - Continue (F5)
+  3. **Third hit:** Check Variables panel → `step.status = "shipped"`
+     - Point out: "Final status - shipped"
+     - Continue (F5)
+- **Final:** See "Order processing complete" in debug console
+- This shows the full order lifecycle happening on your laptop, with real status updates to the cluster
+
+**Advantages:**
+- ✅ More controlled - one order at a time
+- ✅ Customer sees the full user flow
+- ✅ Easier to explain what's happening
+- ✅ No load generator needed
+- ✅ Can place multiple orders manually to show it working repeatedly
 
 ### Customer Talking Points
 
@@ -191,6 +355,111 @@ kubectl exec -n metalmart deployment/inventory -- \
 ```
 
 ### Demo Steps
+
+**Option A: Interactive (Using Frontend - Recommended for demos)**
+
+**Terminal 1: Run with Database Branching + Mirror Mode**
+
+**Where to set breakpoints (to show database operations):**
+
+Set breakpoints at these lines in `services/inventory/`:
+
+1. **`handlers/handlers.go` line 24** - Reading from database
+   ```go
+   inv, err := h.store.GetInventory(productID)
+   ```
+   - Shows when inventory is fetched from your branched database
+
+2. **`handlers/handlers.go` line 41** - Reserving inventory (key operation)
+   ```go
+   reservationID, err := h.store.Reserve(req.Items)
+   ```
+   - Shows when inventory reservation happens in your branch
+
+3. **`store/postgres.go` line 112** - Database transaction starts
+   ```go
+   func (s *PostgresStore) Reserve(items []models.ReserveItem) (string, error) {
+   ```
+   - Shows the database operation beginning
+
+4. **`store/postgres.go` line 137** - Database UPDATE (the actual write)
+   ```go
+   _, err = tx.Exec(`
+       UPDATE inventory
+       SET reserved_quantity = reserved_quantity + $1, last_updated = NOW()
+       WHERE product_id = $2
+   `, item.Quantity, item.ProductID)
+   ```
+   - Shows the actual database write to your branch
+
+**How to set breakpoints:**
+- Click to the left of the line number (red dot appears)
+- Or press F9 on that line
+
+**How to run:**
+
+**Option 1: VSCode Extension (Recommended - if installed)**
+1. Install the **Mirrord VSCode Extension** from the marketplace
+2. Set your breakpoints in VSCode
+3. Use the extension's "Run with Mirrord" command
+4. Select your config file: `.mirrord/inventory-db-branch-mirror.json`
+5. Breakpoints work automatically - no launch.json needed
+
+**Option 2: Terminal (Works without extension)**
+1. **Set your breakpoints in VSCode** (click left of line numbers in the files mentioned above)
+2. **Open terminal in VSCode** (Ctrl+` or View → Terminal)
+3. **Run from terminal:**
+   ```bash
+   cd /Users/adna/Desktop/ecommerce/services/inventory
+   mirrord exec -f ../../.mirrord/inventory-db-branch-mirror.json -- go run .
+   ```
+4. **Breakpoints work automatically** - VSCode attaches to the debugger when you run `go run`
+5. **Don't click "Run and Debug" button** - just use the terminal command above
+
+**Note:** Both methods work. The extension is more convenient (no terminal needed), but terminal works fine too. You don't need launch.json with either method.
+
+**Terminal 2: Open Frontend**
+```bash
+# Get frontend URL
+minikube service frontend -n metalmart
+# Or port-forward:
+kubectl port-forward -n metalmart svc/frontend 3000:80
+```
+
+**In the browser:**
+1. Open frontend (http://localhost:3000)
+2. **Show initial stock** - Click on a product (e.g., Product 1)
+   - **Breakpoint at line 24 hits** - Show in Variables panel: `productID = "1"`
+   - Point out: "This is reading from my branched database"
+   - Continue (F5) - Stock shown comes from your BRANCHED database (same as cluster initially)
+
+3. **Make a change** - Go through checkout and place an order
+   - **Breakpoint at line 41 hits** - Show in Variables panel: `req.Items` with product and quantity
+   - Point out: "This reservation is happening in my branch"
+   - Continue (F5) - **Breakpoint at line 112 hits** - Database transaction starting
+   - Continue (F5) - **Breakpoint at line 137 hits** - Show the UPDATE query
+   - Point out: "This UPDATE is writing to my branched database, not production"
+   - Continue (F5) - Reservation complete
+
+4. **Refresh product page** - Stock should be reduced
+   - **Breakpoint at line 24 hits again** - Show the reduced stock
+   - This shows YOUR branch has changed
+
+5. **Verify cluster is unchanged** - In another terminal:
+   ```bash
+   kubectl exec -n metalmart deployment/inventory -- \
+     curl -s http://localhost:8082/api/inventory/1
+   ```
+   - Cluster still shows original stock!
+
+**What to show:**
+- Frontend shows stock from your branched database
+- Changes you make are visible in the frontend
+- Cluster database stays untouched (verify with kubectl)
+
+---
+
+**Option B: Command Line (For testing/verification)**
 
 **Terminal 1: Run with Database Branching**
 ```bash

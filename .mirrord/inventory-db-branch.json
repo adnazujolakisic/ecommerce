@@ -8,13 +8,16 @@
   "feature": {
     "network": {
       "incoming": "mirror",
-      "outgoing": true
+      "outgoing": {
+        "tcp": true,
+        "udp": true
+      },
+      "dns": true
     },
     "fs": "local",
     "env": true,
     "db_branches": [
       {
-        "id": "inventory-debug-session",
         "type": "pg",
         "version": "16",
         "name": "inventory",
