@@ -20,10 +20,14 @@
 
 4. **GKE Cluster** created and running
    ```bash
+   # For demo: 1 node is enough
    gcloud container clusters create metalmart-cluster \
-     --num-nodes=3 \
+     --num-nodes=1 \
      --zone=us-central1-a \
-     --machine-type=e2-medium
+     --machine-type=e2-small
+   
+   # Or for slightly more headroom:
+   # --machine-type=e2-medium
    ```
 
 ## Quick Deploy

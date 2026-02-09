@@ -109,16 +109,27 @@ else
   echo "   ⚠️  Warning: Catalogue pod not found, skipping inventory seeding"
 fi
 
-# 10. Get frontend LoadBalancer IP
+# 10. Get frontend access info
 echo ""
 echo "✅ Setup complete!"
-echo ""
-echo "Getting frontend LoadBalancer IP..."
-kubectl get svc frontend -n metalmart
-
 echo ""
 echo "📊 Check status:"
 echo "   kubectl get pods -n metalmart"
 echo ""
-echo "🌐 Access frontend (wait for EXTERNAL-IP to be assigned):"
-echo "   kubectl get svc frontend -n metalmart"
+echo "🌐 Access frontend:"
+echo ""
+echo "   Option 1: Port-forward (free, for local access):"
+echo "     kubectl port-forward -n metalmart svc/frontend 3000:80"
+echo "     Then open: http://localhost:3000"
+echo ""
+echo "   Option 2: NodePort (get node IP):"
+NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="ExternalIP")].address}')
+NODE_PORT=$(kubectl get svc frontend -n metalmart -o jsonpath='{.spec.ports[0].nodePort}')
+if [ -n "$NODE_IP" ] && [ -n "$NODE_PORT" ]; then
+  echo "     Node IP: $NODE_IP"
+  echo "     Port: $NODE_PORT"
+  echo "     URL: http://$NODE_IP:$NODE_PORT"
+else
+  echo "     kubectl get nodes -o wide"
+  echo "     kubectl get svc frontend -n metalmart"
+fi
