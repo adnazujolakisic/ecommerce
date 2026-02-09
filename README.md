@@ -45,14 +45,14 @@ Once all prerequisites are installed, run:
 ```
 
 This script will:
-- ✅ Check all prerequisites
-- ✅ Start Minikube
-- ✅ Pre-pull infrastructure images (faster setup)
-- ✅ Build all Docker images
-- ✅ Deploy infrastructure (PostgreSQL, Kafka, Zookeeper)
-- ✅ Deploy all application services
-- ✅ Seed inventory data
-- ✅ Verify deployment
+- Check all prerequisites
+- Start Minikube
+- Pre-pull infrastructure images (faster setup)
+- Build all Docker images
+- Deploy infrastructure (PostgreSQL, Kafka, Zookeeper)
+- Deploy all application services
+- Seed inventory data
+- Verify deployment
 
 **Access the application:**
 ```bash
@@ -108,7 +108,6 @@ See [scripts/helpers/README.md](scripts/helpers/README.md) for more details.
 ## Documentation
 
 - **[DEVELOPMENT.md](DEVELOPMENT.md)** - Complete development guide
-- **[PROJECT-CONTEXT.md](PROJECT-CONTEXT.md)** - Project overview and architecture
 - **[GKE-DEPLOYMENT.md](GKE-DEPLOYMENT.md)** - GKE deployment guide
 - **[MIRRORD-SETUP.md](MIRRORD-SETUP.md)** - Mirrord operator setup (optional)
 - **[scripts/helpers/README.md](scripts/helpers/README.md)** - Helper scripts documentation
