@@ -1,21 +1,91 @@
 #!/bin/bash
 set -e
 
-echo " Starting MetalMart from scratch..."
+echo "🚀 Starting MetalMart from scratch..."
+echo ""
 
-# Check if Docker is running
-echo "0. Checking Docker..."
+# Prerequisites check
+echo "📋 Checking prerequisites..."
+
+# Check Docker
+if ! command -v docker &> /dev/null; then
+  echo "   ❌ Docker is not installed!"
+  echo "   Install from: https://www.docker.com/products/docker-desktop"
+  exit 1
+fi
 if ! docker info >/dev/null 2>&1; then
   echo "   ❌ Docker is not running!"
   echo "   Please start Docker Desktop and try again."
   exit 1
 fi
-echo "   ✅ Docker is running"
+echo "   ✅ Docker is installed and running"
+
+# Check docker-compose
+if ! command -v docker-compose &> /dev/null; then
+  echo "   ❌ docker-compose is not installed!"
+  echo "   Install from: https://docs.docker.com/compose/install/"
+  exit 1
+fi
+echo "   ✅ docker-compose is installed"
+
+# Check Minikube
+if ! command -v minikube &> /dev/null; then
+  echo "   ❌ Minikube is not installed!"
+  echo "   Install with: brew install minikube"
+  echo "   Or from: https://minikube.sigs.k8s.io/docs/start/"
+  exit 1
+fi
+echo "   ✅ Minikube is installed"
+
+# Check kubectl
+if ! command -v kubectl &> /dev/null; then
+  echo "   ❌ kubectl is not installed!"
+  echo "   Install with: brew install kubectl"
+  echo "   Or from: https://kubernetes.io/docs/tasks/tools/"
+  exit 1
+fi
+echo "   ✅ kubectl is installed"
+
+echo ""
+echo "✅ All prerequisites met!"
+echo ""
 
 # 1. Start Minikube
 echo "1. Starting Minikube..."
-minikube start
+# Check if Minikube is actually working by verifying kubectl can connect
+if minikube status &>/dev/null && kubectl cluster-info &>/dev/null 2>&1; then
+  echo "   Minikube is already running and healthy"
+else
+  # If Minikube reports as running but kubectl can't connect, it's in a broken state
+  if minikube status &>/dev/null; then
+    echo "   ⚠️  Minikube appears to be in an inconsistent state"
+    echo "   Skipping cleanup - minikube start will handle it"
+    # Don't try to delete/stop as it can hang - let minikube start handle it
+  fi
+  echo "   Starting Minikube (this may take a minute)..."
+  # minikube start should detect and fix broken states automatically
+  minikube start
+fi
+
+# Verify Minikube is actually working before setting docker-env
+if ! kubectl cluster-info &>/dev/null 2>&1; then
+  echo "   ❌ Failed to connect to Minikube cluster"
+  echo "   Try running: minikube delete && minikube start"
+  exit 1
+fi
+
 eval $(minikube docker-env)
+echo "   ✅ Minikube is ready"
+
+# 1.5. Pre-pull infrastructure images to avoid slow pulls during deployment
+echo "1.5. Pre-pulling infrastructure images..."
+echo "   Pulling postgres:15-alpine..."
+docker pull postgres:15-alpine 2>/dev/null || echo "   (using cached image)"
+echo "   Pulling confluentinc/cp-zookeeper:7.5.0..."
+docker pull confluentinc/cp-zookeeper:7.5.0 2>/dev/null || echo "   (using cached image)"
+echo "   Pulling confluentinc/cp-kafka:7.5.0..."
+docker pull confluentinc/cp-kafka:7.5.0 2>/dev/null || echo "   (using cached image)"
+echo "   ✅ Infrastructure images ready"
 
 # 2. Build images
 echo "2. Building Docker images..."
@@ -36,12 +106,6 @@ kubectl apply -f k8s/base/namespace.yaml
 kubectl apply -f k8s/base/infrastructure/secrets.yaml
 kubectl apply -f k8s/base/infrastructure/postgres.yaml
 kubectl apply -f k8s/base/infrastructure/kafka.yaml
-
-# Fix image pull policy for infrastructure (they need to pull from Docker Hub)
-echo "   Setting image pull policy for infrastructure..."
-kubectl patch deployment postgres -n metalmart -p '{"spec":{"template":{"spec":{"containers":[{"name":"postgres","imagePullPolicy":"IfNotPresent"}]}}}}' 2>/dev/null || true
-kubectl patch deployment kafka -n metalmart -p '{"spec":{"template":{"spec":{"containers":[{"name":"kafka","imagePullPolicy":"IfNotPresent"}]}}}}' 2>/dev/null || true
-kubectl patch deployment zookeeper -n metalmart -p '{"spec":{"template":{"spec":{"containers":[{"name":"zookeeper","imagePullPolicy":"IfNotPresent"}]}}}}' 2>/dev/null || true
 
 # Wait for infrastructure to be ready
 echo "   Waiting for infrastructure to be ready..."
@@ -101,10 +165,32 @@ else
 fi
 
 echo ""
-echo " Setup complete!"
+echo "✅ Setup complete!"
 echo ""
-echo " Access frontend:"
-echo "   minikube service frontend -n metalmart"
+
+# Final verification
+echo "🔍 Verifying deployment..."
+READY_PODS=$(kubectl get pods -n metalmart --field-selector=status.phase=Running --no-headers 2>/dev/null | wc -l | tr -d ' ')
+TOTAL_PODS=$(kubectl get pods -n metalmart --no-headers 2>/dev/null | wc -l | tr -d ' ')
+
+if [ "$READY_PODS" -gt 0 ]; then
+  echo "   ✅ $READY_PODS/$TOTAL_PODS pods are running"
+else
+  echo "   ⚠️  No pods are running yet. Check status with: kubectl get pods -n metalmart"
+fi
+
 echo ""
-echo " Check status:"
-echo "   kubectl get pods -n metalmart"
+echo "📝 Next steps:"
+echo ""
+echo "   Access frontend:"
+echo "     minikube service frontend -n metalmart"
+echo ""
+echo "   Check pod status:"
+echo "     kubectl get pods -n metalmart"
+echo ""
+echo "   View logs:"
+echo "     kubectl logs -n metalmart deployment/<service-name> -f"
+echo ""
+echo "   Troubleshooting:"
+echo "     kubectl describe pod <pod-name> -n metalmart"
+echo ""
