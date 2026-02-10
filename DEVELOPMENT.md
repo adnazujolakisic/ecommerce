@@ -15,7 +15,6 @@ This is my development guide for MetalMart - a microservices e-commerce app I us
 
 ## Project Overview
 
-MetalMart is a microservices e-commerce application I built for demonstrating Mirrord features ( I ll add more ):
 - Kafka queue splitting
 - Database branching
 - Filtering
@@ -30,7 +29,7 @@ MetalMart is a microservices e-commerce application I built for demonstrating Mi
 - **order-processor** - Kafka consumer, processes orders async
 
 ### Infrastructure
-- **PostgreSQL** - Databases: catalogue, inventory, orders (see [DATA-MODEL.md](DATA-MODEL.md))
+- **PostgreSQL** - Databases: catalogue, inventory, orders
 - **Kafka + Zookeeper** - Async messaging for order processing
 - **nginx** - Frontend reverse proxy
 

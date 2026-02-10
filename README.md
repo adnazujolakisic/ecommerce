@@ -2,6 +2,8 @@
 
 A microservices e-commerce application designed as a demo platform for Mirrord features (Kafka queue splitting, database branching, filtering, steal mode, and mirror mode).
 
+![App Preview](./assets/app-preview.png)
+
 ## Architecture
 
 **Services (Go microservices):**
