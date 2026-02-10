@@ -176,7 +176,34 @@ jobs:
         run: |
           kubectl apply -f k8s/base/namespace.yaml
           kubectl apply -f k8s/base/infrastructure/secrets.yaml
-          kubectl apply -f k8s/base/infrastructure/postgres.yaml
+          
+          # Apply postgres resources separately to handle PVC immutability
+          # Extract and apply deployment, service, and configmap (skip PVC)
+          kubectl apply -f k8s/base/infrastructure/postgres.yaml --dry-run=client -o yaml | \
+            grep -v "kind: PersistentVolumeClaim" | \
+            kubectl apply -f - || true
+          
+          # Handle PVC separately - only create if it doesn't exist
+          if ! kubectl get pvc postgres-pvc -n metalmart &>/dev/null; then
+            echo "Creating postgres-pvc..."
+            kubectl apply -f - <<EOF
+          apiVersion: v1
+          kind: PersistentVolumeClaim
+          metadata:
+            name: postgres-pvc
+            namespace: metalmart
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            storageClassName: standard-rwo
+            resources:
+              requests:
+                storage: 1Gi
+          EOF
+          else
+            echo "✅ PVC postgres-pvc already exists, skipping (immutable)"
+          fi
+          
           kubectl apply -f k8s/base/infrastructure/kafka.yaml
 
       - name: Wait for infrastructure
