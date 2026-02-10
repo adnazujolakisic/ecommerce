@@ -26,6 +26,8 @@ jobs:
       k8s: ${{ steps.filter.outputs.k8s }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # Needed for paths-filter to detect changed files on push
       - uses: dorny/paths-filter@v2
         id: filter
         with:
@@ -173,6 +175,7 @@ jobs:
             }
 
       - name: Deploy infrastructure
+        if: needs.detect-changes.outputs.k8s == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           kubectl apply -f k8s/base/namespace.yaml
           kubectl apply -f k8s/base/infrastructure/secrets.yaml
@@ -198,10 +201,11 @@ jobs:
           kubectl apply -f k8s/base/infrastructure/kafka.yaml
 
       - name: Wait for infrastructure
+        if: needs.detect-changes.outputs.k8s == 'true' || github.event_name == 'workflow_dispatch'
         run: |
-          kubectl wait --for=condition=ready pod -l app=postgres -n metalmart --timeout=180s || true
-          kubectl wait --for=condition=ready pod -l app=zookeeper -n metalmart --timeout=180s || true
-          kubectl wait --for=condition=ready pod -l app=kafka -n metalmart --timeout=180s || true
+          kubectl wait --for=condition=ready pod -l app=postgres -n metalmart --timeout=90s || true
+          kubectl wait --for=condition=ready pod -l app=zookeeper -n metalmart --timeout=90s || true
+          kubectl wait --for=condition=ready pod -l app=kafka -n metalmart --timeout=90s || true
 
       - name: Update kustomization with project ID (deploy job)
         run: |
@@ -217,6 +221,13 @@ jobs:
             kubectl kustomize k8s/overlays/gke
             exit 1
           }
+
+      - name: Restart app deployments (pick up new images)
+        run: |
+          for dep in frontend catalogue inventory checkout order order-processor; do
+            kubectl rollout restart deployment/$dep -n metalmart 2>/dev/null || true
+          done
+          kubectl rollout status deployment/frontend -n metalmart --timeout=120s || true
 
       - name: Enable demo mode
         run: |
