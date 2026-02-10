@@ -64,15 +64,25 @@ jobs:
 
       - name: Update kustomization with project ID
         run: |
-          sed -i "s/PROJECT_ID/$GCP_PROJECT_ID/g" k8s/overlays/gke/kustomization.yaml
+          if grep -q "PROJECT_ID" k8s/overlays/gke/kustomization.yaml; then
+            sed -i "s/PROJECT_ID/$GCP_PROJECT_ID/g" k8s/overlays/gke/kustomization.yaml
+            echo "✅ Updated kustomization.yaml with project ID"
+          else
+            echo "⚠️  PROJECT_ID already replaced or not found, skipping"
+          fi
 
       - name: Commit kustomization changes
+        if: env.GCP_PROJECT_ID != ''
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add k8s/overlays/gke/kustomization.yaml
-          git commit -m "chore: update GKE kustomization with project ID [skip ci]" || exit 0
-          git push || exit 0
+          git add k8s/overlays/gke/kustomization.yaml || true
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: update GKE kustomization with project ID [skip ci]" || true
+            git push || true
+          fi
 
   deploy:
     needs: build-and-push
@@ -93,7 +103,11 @@ jobs:
         run: |
           gcloud container clusters get-credentials $GKE_CLUSTER \
             --zone $GKE_ZONE \
-            --project $GCP_PROJECT_ID
+            --project $GCP_PROJECT_ID || {
+              echo "❌ Failed to get cluster credentials"
+              echo "Make sure cluster '$GKE_CLUSTER' exists in zone '$GKE_ZONE'"
+              exit 1
+            }
 
       - name: Deploy infrastructure
         run: |
@@ -108,9 +122,20 @@ jobs:
           kubectl wait --for=condition=ready pod -l app=zookeeper -n metalmart --timeout=180s || true
           kubectl wait --for=condition=ready pod -l app=kafka -n metalmart --timeout=180s || true
 
+      - name: Update kustomization with project ID (deploy job)
+        run: |
+          if grep -q "PROJECT_ID" k8s/overlays/gke/kustomization.yaml; then
+            sed -i "s/PROJECT_ID/$GCP_PROJECT_ID/g" k8s/overlays/gke/kustomization.yaml
+          fi
+
       - name: Deploy application services
         run: |
-          kubectl kustomize k8s/overlays/gke | kubectl apply -f -
+          kubectl kustomize k8s/overlays/gke | kubectl apply -f - || {
+            echo "❌ Failed to deploy services"
+            echo "Checking kustomization..."
+            kubectl kustomize k8s/overlays/gke
+            exit 1
+          }
 
       - name: Enable demo mode
         run: |
