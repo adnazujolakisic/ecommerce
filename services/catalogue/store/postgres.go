@@ -71,7 +71,7 @@ func (s *PostgresStore) Seed() error {
 			name:        "MetalBear Classic T-Shirt",
 			description: "Classic black t-shirt featuring the iconic MetalBear logo. Made from 100% organic cotton for maximum comfort during those long debugging sessions.",
 			price:       29.99,
-			imageURL:    "/images/tshirt-classic.svg",
+			imageURL:    "/images/tshirt-classic.webp",
 			category:    "t-shirts",
 		},
 		{
@@ -79,7 +79,7 @@ func (s *PostgresStore) Seed() error {
 			name:        "MetalBear Logo Hoodie",
 			description: "Stay warm while coding with this premium hoodie. Features the MetalBear logo on the front and 'Debug Locally, Ship Globally' on the back.",
 			price:       59.99,
-			imageURL:    "/images/hoodie-logo.svg",
+			imageURL:    "/images/hoodie-logo.webp",
 			category:    "hoodies",
 		},
 		{
@@ -87,7 +87,7 @@ func (s *PostgresStore) Seed() error {
 			name:        "MetalBear Dev T-Shirt - Works on My Machine",
 			description: "The classic developer excuse, now on a shirt. Perfect for standup meetings and code reviews.",
 			price:       29.99,
-			imageURL:    "/images/tshirt-works.svg",
+			imageURL:    "/images/tshirt-works.webp",
 			category:    "t-shirts",
 		},
 		{
@@ -95,7 +95,7 @@ func (s *PostgresStore) Seed() error {
 			name:        "MetalBear Cap",
 			description: "Adjustable snapback cap with embroidered MetalBear logo. Shield your eyes from the glare of your monitor.",
 			price:       24.99,
-			imageURL:    "/images/cap.svg",
+			imageURL:    "/images/cap.webp",
 			category:    "accessories",
 		},
 		{
@@ -103,7 +103,7 @@ func (s *PostgresStore) Seed() error {
 			name:        "MetalBear Mug - Debug with Coffee",
 			description: "Large 15oz ceramic mug perfect for your morning coffee or late-night debugging fuel. Microwave and dishwasher safe.",
 			price:       14.99,
-			imageURL:    "/images/mug.svg",
+			imageURL:    "/images/mug.webp",
 			category:    "accessories",
 		},
 		{
@@ -111,7 +111,7 @@ func (s *PostgresStore) Seed() error {
 			name:        "MetalBear Sticker Pack",
 			description: "Set of 10 high-quality vinyl stickers featuring MetalBear logos and developer humor. Perfect for laptops, water bottles, and keyboards.",
 			price:       9.99,
-			imageURL:    "/images/stickers.svg",
+			imageURL:    "/images/stickers.webp",
 			category:    "accessories",
 		},
 		{
@@ -119,7 +119,7 @@ func (s *PostgresStore) Seed() error {
 			name:        "MetalBear Polo Shirt",
 			description: "Professional polo shirt with subtle MetalBear branding. Perfect for when you need to look presentable but still rep your favorite tools.",
 			price:       44.99,
-			imageURL:    "/images/polo.svg",
+			imageURL:    "/images/polo.webp",
 			category:    "t-shirts",
 		},
 		{
@@ -127,7 +127,7 @@ func (s *PostgresStore) Seed() error {
 			name:        "MetalBear Zip Hoodie",
 			description: "Premium zip-up hoodie with MetalBear logo. Features deep pockets for your phone and snacks. Available in charcoal grey.",
 			price:       69.99,
-			imageURL:    "/images/hoodie-zip.svg",
+			imageURL:    "/images/hoodie-zip.webp",
 			category:    "hoodies",
 		},
 		{
@@ -135,7 +135,7 @@ func (s *PostgresStore) Seed() error {
 			name:        "MetalBear Socks - 3 Pack",
 			description: "Comfortable crew socks with MetalBear patterns. Because even your feet deserve good developer swag.",
 			price:       19.99,
-			imageURL:    "/images/socks.svg",
+			imageURL:    "/images/socks.webp",
 			category:    "accessories",
 		},
 		{
@@ -143,7 +143,7 @@ func (s *PostgresStore) Seed() error {
 			name:        "MetalBear Beanie",
 			description: "Warm knit beanie with embroidered MetalBear logo. Perfect for cold server rooms and winter debugging.",
 			price:       22.99,
-			imageURL:    "/images/beanie.svg",
+			imageURL:    "/images/beanie.webp",
 			category:    "accessories",
 		},
 	}

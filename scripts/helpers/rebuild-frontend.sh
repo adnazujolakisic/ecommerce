@@ -5,7 +5,16 @@
 set -e
 
 echo "🔨 Rebuilding frontend image..."
-docker build -t metalmart/frontend:latest frontend/
+
+# Check if we're using Minikube
+if kubectl config current-context | grep -q minikube; then
+  echo "   Detected Minikube - building and loading image..."
+  docker build -t metalmart/frontend:latest frontend/
+  minikube image load metalmart/frontend:latest
+else
+  echo "   Building image..."
+  docker build -t metalmart/frontend:latest frontend/
+fi
 
 echo ""
 echo "🔄 Restarting frontend deployment..."
