@@ -9,20 +9,20 @@ resources:
 # Format: LOCATION-docker.pkg.dev/PROJECT_ID/REPOSITORY/IMAGE
 images:
   - name: metalmart/catalogue
-    newName: us-docker.pkg.dev/PROJECT_ID/metalmart/catalogue
+    newName: us-docker.pkg.dev/mirrord-test-474620/metalmart/catalogue
     newTag: latest
   - name: metalmart/inventory
-    newName: us-docker.pkg.dev/PROJECT_ID/metalmart/inventory
+    newName: us-docker.pkg.dev/mirrord-test-474620/metalmart/inventory
     newTag: latest
   - name: metalmart/checkout
-    newName: us-docker.pkg.dev/PROJECT_ID/metalmart/checkout
+    newName: us-docker.pkg.dev/mirrord-test-474620/metalmart/checkout
     newTag: latest
   - name: metalmart/order
-    newName: us-docker.pkg.dev/PROJECT_ID/metalmart/order
+    newName: us-docker.pkg.dev/mirrord-test-474620/metalmart/order
     newTag: latest
   - name: metalmart/order-processor
-    newName: us-docker.pkg.dev/PROJECT_ID/metalmart/order-processor
+    newName: us-docker.pkg.dev/mirrord-test-474620/metalmart/order-processor
     newTag: latest
   - name: metalmart/frontend
-    newName: us-docker.pkg.dev/PROJECT_ID/metalmart/frontend
+    newName: us-docker.pkg.dev/mirrord-test-474620/metalmart/frontend
     newTag: latest
