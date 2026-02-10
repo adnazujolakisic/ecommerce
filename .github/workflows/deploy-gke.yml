@@ -177,11 +177,19 @@ jobs:
           kubectl apply -f k8s/base/namespace.yaml
           kubectl apply -f k8s/base/infrastructure/secrets.yaml
           
-          # Check if PVC exists before applying postgres.yaml
+          # Apply postgres resources - handle PVC immutability
           if kubectl get pvc postgres-pvc -n metalmart &>/dev/null; then
-            echo "PVC exists, applying postgres resources without PVC..."
-            # Apply only non-PVC resources from postgres.yaml
-            kubectl apply -f k8s/base/infrastructure/postgres.yaml 2>&1 | grep -v "immutable\|Forbidden.*spec" || true
+            echo "✅ PVC exists, applying postgres resources (will ignore PVC errors)..."
+            # Apply postgres.yaml, capture output to check for PVC errors
+            OUTPUT=$(kubectl apply -f k8s/base/infrastructure/postgres.yaml 2>&1) || {
+              if echo "$OUTPUT" | grep -q "immutable\|Forbidden.*spec"; then
+                echo "⚠️  PVC error ignored (immutable), other resources applied"
+                echo "$OUTPUT" | grep -v "immutable\|Forbidden.*spec" || true
+              else
+                echo "$OUTPUT"
+                exit 1
+              fi
+            }
           else
             echo "PVC doesn't exist, applying all postgres resources..."
             kubectl apply -f k8s/base/infrastructure/postgres.yaml
