@@ -11,6 +11,7 @@ export default function OrderTracking() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const isInitialLoad = useRef(true)
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     if (!token) return
@@ -32,11 +33,11 @@ export default function OrderTracking() {
     
     loadInitial()
     
-    // Poll for status updates every 3 seconds
+    // Poll for status updates every 2 seconds
     // Stop polling if order is in a final state
     const finalStates = ['shipped', 'delivered', 'cancelled']
     
-    const pollInterval = setInterval(async () => {
+    pollIntervalRef.current = setInterval(async () => {
       try {
         const data = await getOrderByToken(token)
         console.log('Polling order status:', data.status, data.order_number)
@@ -47,16 +48,22 @@ export default function OrderTracking() {
         // Stop polling if order reaches a final state
         if (finalStates.includes(data.status)) {
           console.log('Order reached final state, stopping polling')
-          clearInterval(pollInterval)
+          if (pollIntervalRef.current) {
+            clearInterval(pollIntervalRef.current)
+            pollIntervalRef.current = null
+          }
         }
       } catch (err) {
         console.error('Failed to poll order status:', err)
         // Continue polling even on error
       }
-    }, 3000)
+    }, 2000)
     
     return () => {
-      clearInterval(pollInterval)
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current)
+        pollIntervalRef.current = null
+      }
     }
   }, [token])
 
