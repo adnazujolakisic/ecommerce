@@ -137,7 +137,7 @@ kubectl get mirrordkafkatopicsconsumers -n metalmart
 
 ```bash
 cd services/order-processor
-mirrord exec --config-file ../../.mirrord/order-processor.json -- go run main.go
+mirrord exec --config-file ../../.mirrord/queue-splitting.json -- go run main.go
 ```
 
 **Expected:** Should connect without "operator not found" error.
@@ -146,7 +146,7 @@ mirrord exec --config-file ../../.mirrord/order-processor.json -- go run main.go
 
 ```bash
 cd services/inventory
-mirrord exec --config-file ../../.mirrord/inventory-db-branch.json -- go run main.go
+mirrord exec --config-file ../../.mirrord/db-branching.json -- go run main.go
 ```
 
 **Expected:** Should create database branch and connect.
@@ -272,13 +272,13 @@ kubectl apply -f k8s/base/infrastructure/mirrord-kafka.yaml
 ### Test Queue Splitting
 ```bash
 cd services/order-processor
-mirrord exec --config-file ../../.mirrord/order-processor.json -- go run main.go
+mirrord exec --config-file ../../.mirrord/queue-splitting.json -- go run main.go
 ```
 
 ### Test Database Branching
 ```bash
 cd services/inventory
-mirrord exec --config-file ../../.mirrord/inventory-db-branch.json -- go run main.go
+mirrord exec --config-file ../../.mirrord/db-branching.json -- go run main.go
 ```
 
 ---

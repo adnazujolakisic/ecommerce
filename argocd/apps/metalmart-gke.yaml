@@ -1,15 +1,19 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: metalmart
+  name: metalmart-gke
   namespace: argocd
-  # Following playground approach: use kustomize overlays
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
   source:
     repoURL: https://github.com/metalbear-co/metalmart.git
     targetRevision: HEAD
-    path: k8s/overlays/minikube
+    path: k8s/overlays/gke
+    # Following playground approach: use kustomize directly
+    # Note: PROJECT_ID must be replaced in kustomization.yaml before sync
+    # See argocd/README.md for options
   destination:
     server: https://kubernetes.default.svc
     namespace: metalmart
@@ -19,3 +23,5 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true

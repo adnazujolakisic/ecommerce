@@ -24,7 +24,7 @@ Complete guide for demonstrating Mirrord features with MetalMart - for customer 
 ```bash
 # Terminal 1: Start Mirrord
 cd /Users/adna/Desktop/ecommerce/services/order-processor
-mirrord exec -f ../../.mirrord/order-processor.json -- go run .
+mirrord exec -f ../../.mirrord/queue-splitting.json -- go run .
 
 # Then open frontend and place order (email pre-filled with demo@metalbear.com)
 minikube service frontend -n metalmart
@@ -39,7 +39,7 @@ go run scripts/load-generator.go 20 120
 
 # Terminal 2: Start Mirrord
 cd /Users/adna/Desktop/ecommerce/services/order-processor
-mirrord exec -f ../../.mirrord/order-processor.json -- go run .
+mirrord exec -f ../../.mirrord/queue-splitting.json -- go run .
 ```
 
 **What happens:**
@@ -144,7 +144,7 @@ Set breakpoints at these lines in `services/order-processor/main.go`:
 **Option A: Command line (no breakpoint needed - just watch logs)**
 ```bash
 cd /Users/adna/Desktop/ecommerce/services/order-processor
-mirrord exec -f ../../.mirrord/order-processor.json -- go run .
+mirrord exec -f ../../.mirrord/queue-splitting.json -- go run .
 ```
 
 **Option B: VSCode Debugger (with breakpoints - recommended for demos)**
@@ -220,7 +220,7 @@ Set breakpoints at these lines in `services/order-processor/main.go`:
 **Option A: Command line**
 ```bash
 cd /Users/adna/Desktop/ecommerce/services/order-processor
-mirrord exec -f ../../.mirrord/order-processor.json -- go run .
+mirrord exec -f ../../.mirrord/queue-splitting.json -- go run .
 ```
 
 **Option B: VSCode Debugger (with breakpoints - recommended for demos)**
@@ -315,7 +315,7 @@ kubectl port-forward -n metalmart svc/frontend 3000:80
    ```
 
 3. **Show filtering:**
-   - Open `.mirrord/order-processor.json`
+   - Open `.mirrord/queue-splitting.json`
    - Point to: `"customer_email": ".*@metalbear.com"`
    - Explain: "Only messages matching this pattern come to me"
 
@@ -402,7 +402,7 @@ Set breakpoints at these lines in `services/inventory/`:
 1. Install the **Mirrord VSCode Extension** from the marketplace
 2. Set your breakpoints in VSCode
 3. Use the extension's "Run with Mirrord" command
-4. Select your config file: `.mirrord/inventory-db-branch-mirror.json`
+4. Select your config file: `.mirrord/db-branching.json`
 5. Breakpoints work automatically - no launch.json needed
 
 **Option 2: Terminal (Works without extension)**
@@ -411,7 +411,7 @@ Set breakpoints at these lines in `services/inventory/`:
 3. **Run from terminal:**
    ```bash
    cd /Users/adna/Desktop/ecommerce/services/inventory
-   mirrord exec -f ../../.mirrord/inventory-db-branch-mirror.json -- go run .
+   mirrord exec -f ../../.mirrord/db-branching.json -- go run .
    ```
 4. **Breakpoints work automatically** - VSCode attaches to the debugger when you run `go run`
 5. **Don't click "Run and Debug" button** - just use the terminal command above
@@ -466,7 +466,7 @@ kubectl port-forward -n metalmart svc/frontend 3000:80
 cd /Users/adna/Desktop/ecommerce/services/inventory
 
 # This creates an isolated database branch
-mirrord exec -f ../../.mirrord/inventory-db-branch.json -- go run .
+mirrord exec -f ../../.mirrord/db-branching.json -- go run .
 ```
 
 **Terminal 2: Make Changes**
@@ -575,7 +575,7 @@ kubectl get mirrordkafkatopicsconsumers -n metalmart
 ```
 
 **Check 4: Filter matches**
-- Verify `.mirrord/order-processor.json` has `".*@metalbear.com"`
+- Verify `.mirrord/queue-splitting.json` has `".*@metalbear.com"`
 - Load generator creates `@metalbear.com` emails by default
 
 **Check 5: Messages in Kafka**
@@ -612,7 +612,7 @@ kubectl get mirrordkafkatopicsconsumers -n metalmart
 
 ### Messages not matching filter
 
-- Check filter in `.mirrord/order-processor.json`
+- Check filter in `.mirrord/queue-splitting.json`
 - Verify load generator creates `@metalbear.com` emails (it does by default)
 - Check message headers in Kafka
 
@@ -647,11 +647,11 @@ kubectl describe deployment order-processor -n metalmart | grep DEMO_MODE
 
 # Test queue splitting (main demo)
 cd services/order-processor
-mirrord exec -f ../../.mirrord/order-processor.json -- go run .
+mirrord exec -f ../../.mirrord/queue-splitting.json -- go run .
 
 # Test database branching
 cd services/inventory
-mirrord exec -f ../../.mirrord/inventory-db-branch.json -- go run .
+mirrord exec -f ../../.mirrord/db-branching.json -- go run .
 
 # Test steal mode
 cd services/inventory

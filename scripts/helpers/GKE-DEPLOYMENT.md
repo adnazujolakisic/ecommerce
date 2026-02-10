@@ -86,6 +86,10 @@ kubectl wait --for=condition=ready pod -l app=kafka -n metalmart --timeout=180s
 
 ### 5. Deploy Application Services
 ```bash
+# Following playground approach: use kustomize build
+kustomize build k8s/overlays/gke | kubectl apply -f -
+
+# Or using kubectl kustomize (equivalent):
 kubectl apply -k k8s/overlays/gke
 ```
 

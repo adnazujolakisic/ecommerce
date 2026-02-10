@@ -70,9 +70,10 @@ kubectl wait --for=condition=ready pod -l app=postgres -n metalmart --timeout=18
 kubectl wait --for=condition=ready pod -l app=zookeeper -n metalmart --timeout=180s || true
 kubectl wait --for=condition=ready pod -l app=kafka -n metalmart --timeout=180s || true
 
-# 5. Deploy application services using GKE overlay
+# 5. Deploy application services using GKE overlay (following playground approach)
 echo "6. Deploying application services..."
-kubectl apply -k k8s/overlays/gke
+# Following playground approach: use kustomize build
+kustomize build k8s/overlays/gke | kubectl apply -f -
 
 # 6. Apply Mirrord resources (optional)
 echo "7. Applying Mirrord Kafka resources (if operator installed)..."
