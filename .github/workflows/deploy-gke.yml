@@ -14,8 +14,56 @@ env:
   AR_REPOSITORY: metalmart
 
 jobs:
-  build-and-push:
+  detect-changes:
     runs-on: ubuntu-latest
+    outputs:
+      catalogue: ${{ steps.filter.outputs.catalogue }}
+      inventory: ${{ steps.filter.outputs.inventory }}
+      checkout: ${{ steps.filter.outputs.checkout }}
+      order: ${{ steps.filter.outputs.order }}
+      order-processor: ${{ steps.filter.outputs.order-processor }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      k8s: ${{ steps.filter.outputs.k8s }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            catalogue:
+              - 'services/catalogue/**'
+            inventory:
+              - 'services/inventory/**'
+            checkout:
+              - 'services/checkout/**'
+            order:
+              - 'services/order/**'
+            order-processor:
+              - 'services/order-processor/**'
+            frontend:
+              - 'frontend/**'
+            k8s:
+              - 'k8s/**'
+
+  build-and-push:
+    needs: detect-changes
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - name: catalogue
+            path: services/catalogue
+          - name: inventory
+            path: services/inventory
+          - name: checkout
+            path: services/checkout
+          - name: order
+            path: services/order
+          - name: order-processor
+            path: services/order-processor
+          - name: frontend
+            path: frontend
+      fail-fast: false
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -34,35 +82,44 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Build and push catalogue
+      - name: Check if ${{ matrix.service.name }} changed
+        id: check-changes
         run: |
-          docker build -t $AR_LOCATION-docker.pkg.dev/$GCP_PROJECT_ID/$AR_REPOSITORY/catalogue:latest services/catalogue/
-          docker push $AR_LOCATION-docker.pkg.dev/$GCP_PROJECT_ID/$AR_REPOSITORY/catalogue:latest
+          SERVICE_NAME="${{ matrix.service.name }}"
+          if [ "$SERVICE_NAME" = "catalogue" ]; then
+            CHANGED="${{ needs.detect-changes.outputs.catalogue }}"
+          elif [ "$SERVICE_NAME" = "inventory" ]; then
+            CHANGED="${{ needs.detect-changes.outputs.inventory }}"
+          elif [ "$SERVICE_NAME" = "checkout" ]; then
+            CHANGED="${{ needs.detect-changes.outputs.checkout }}"
+          elif [ "$SERVICE_NAME" = "order" ]; then
+            CHANGED="${{ needs.detect-changes.outputs.order }}"
+          elif [ "$SERVICE_NAME" = "order-processor" ]; then
+            CHANGED="${{ needs.detect-changes.outputs.order-processor }}"
+          elif [ "$SERVICE_NAME" = "frontend" ]; then
+            CHANGED="${{ needs.detect-changes.outputs.frontend }}"
+          fi
+          
+          if [ "$CHANGED" = "true" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "should_build=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_build=false" >> $GITHUB_OUTPUT
+          fi
 
-      - name: Build and push inventory
+      - name: Build and push ${{ matrix.service.name }}
+        if: steps.check-changes.outputs.should_build == 'true'
         run: |
-          docker build -t $AR_LOCATION-docker.pkg.dev/$GCP_PROJECT_ID/$AR_REPOSITORY/inventory:latest services/inventory/
-          docker push $AR_LOCATION-docker.pkg.dev/$GCP_PROJECT_ID/$AR_REPOSITORY/inventory:latest
+          echo "Building ${{ matrix.service.name }}..."
+          docker buildx build \
+            --platform linux/amd64 \
+            --tag $AR_LOCATION-docker.pkg.dev/$GCP_PROJECT_ID/$AR_REPOSITORY/${{ matrix.service.name }}:latest \
+            --push \
+            --cache-from type=registry,ref=$AR_LOCATION-docker.pkg.dev/$GCP_PROJECT_ID/$AR_REPOSITORY/${{ matrix.service.name }}:latest \
+            ${{ matrix.service.path }}/
 
-      - name: Build and push checkout
-        run: |
-          docker build -t $AR_LOCATION-docker.pkg.dev/$GCP_PROJECT_ID/$AR_REPOSITORY/checkout:latest services/checkout/
-          docker push $AR_LOCATION-docker.pkg.dev/$GCP_PROJECT_ID/$AR_REPOSITORY/checkout:latest
-
-      - name: Build and push order
-        run: |
-          docker build -t $AR_LOCATION-docker.pkg.dev/$GCP_PROJECT_ID/$AR_REPOSITORY/order:latest services/order/
-          docker push $AR_LOCATION-docker.pkg.dev/$GCP_PROJECT_ID/$AR_REPOSITORY/order:latest
-
-      - name: Build and push order-processor
-        run: |
-          docker build -t $AR_LOCATION-docker.pkg.dev/$GCP_PROJECT_ID/$AR_REPOSITORY/order-processor:latest services/order-processor/
-          docker push $AR_LOCATION-docker.pkg.dev/$GCP_PROJECT_ID/$AR_REPOSITORY/order-processor:latest
-
-      - name: Build and push frontend
-        run: |
-          docker build -t $AR_LOCATION-docker.pkg.dev/$GCP_PROJECT_ID/$AR_REPOSITORY/frontend:latest frontend/
-          docker push $AR_LOCATION-docker.pkg.dev/$GCP_PROJECT_ID/$AR_REPOSITORY/frontend:latest
+      - name: Skip ${{ matrix.service.name }} (no changes)
+        if: steps.check-changes.outputs.should_build != 'true'
+        run: echo "⏭️  Skipping ${{ matrix.service.name }} - no changes detected"
 
       - name: Update kustomization with project ID
         run: |
@@ -87,7 +144,7 @@ jobs:
           fi
 
   deploy:
-    needs: build-and-push
+    needs: [build-and-push, detect-changes]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
