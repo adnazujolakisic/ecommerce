@@ -1,0 +1,8 @@
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: frontend-cert
+  namespace: metalmart
+spec:
+  domains:
+    - 34-102-166-235.nip.io  # GKE-specific: nip.io domain for IP 34.102.166.235

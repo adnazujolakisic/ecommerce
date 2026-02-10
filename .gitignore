@@ -79,6 +79,7 @@ __debug_bin*
 frontend/dist/
 frontend/.vite/
 frontend/.cache/
+# Note: .htpasswd is committed (password is hashed, safe for demo)
 
 # Database
 *.db

@@ -41,9 +41,9 @@ function App() {
 
   return (
     <BrowserRouter>
-      <div className="app">
+      <div style={{ minHeight: '100vh' }}>
         <Header cartCount={cart.reduce((sum, i) => sum + i.quantity, 0)} />
-        <main className="main-content">
+        <main>
           <Routes>
             <Route path="/" element={<ProductList addToCart={addToCart} />} />
             <Route path="/products/:id" element={<ProductDetail addToCart={addToCart} />} />

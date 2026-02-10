@@ -28,9 +28,12 @@ Quick rebuild and restart of frontend in Kubernetes.
 ```
 
 **What it does:**
-1. Rebuilds frontend Docker image
-2. Restarts frontend deployment
-3. Waits for rollout to complete
+1. Builds frontend with `npm run build`
+2. Builds Docker image (handles Minikube docker-env automatically)
+3. Tags image for Kubernetes
+4. Restarts frontend deployment
+5. Waits for rollout to complete
+6. Verifies pod status
 
 ---
 

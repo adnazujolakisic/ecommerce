@@ -9,7 +9,7 @@ metadata:
     networking.gke.io/managed-certificates: "frontend-cert"  # Auto SSL certificate
 spec:
   rules:
-  - http:
+  - http:  # Host will be added by environment-specific overlay
       paths:
       - path: /
         pathType: Prefix

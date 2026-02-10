@@ -1,0 +1,7 @@
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: frontend-cert
+  namespace: metalmart
+spec:
+  domains: []  # Domains will be added by environment-specific overlay

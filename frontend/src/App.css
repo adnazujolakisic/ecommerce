@@ -5,10 +5,11 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-  background: #FAFAFD;
-  color: #222222;
-  line-height: 1.6;
+  font-family: Poppins, system-ui, sans-serif;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  line-height: 1.5;
+  font-feature-settings: "rlig" 1, "calt" 1;
 }
 
 a {
@@ -100,9 +101,35 @@ a {
   width: 100%;
 }
 
+
 @media (max-width: 768px) {
   .main-content {
     padding: 1rem;
+  }
+}
+
+/* Search filters bar - top spacing (avoids Tailwind purging/specificity issues) */
+.search-filters-bar {
+  padding-top: 3rem;
+}
+
+/* Product List Container - Responsive Padding */
+.product-list-container {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 768px) {
+  .product-list-container {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .product-list-container {
+    padding-left: 8rem;
+    padding-right: 8rem;
   }
 }
 
@@ -315,7 +342,7 @@ a {
 
 /* Product Detail */
 .product-detail {
-  padding: 1rem 0;
+  padding: 4rem;
 }
 
 .back-link {
@@ -460,6 +487,10 @@ a {
   background: #5f57d4;
 }
 
+.cart-page {
+  padding: 4rem;
+}
+
 .cart-page h1 {
   margin-bottom: 2rem;
 }
@@ -581,6 +612,10 @@ a {
 }
 
 /* Checkout */
+.checkout-page {
+  padding: 4rem;
+}
+
 .checkout-page h1 {
   margin-bottom: 2rem;
 }

@@ -1,0 +1,17 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: frontend
+  namespace: metalmart
+spec:
+  rules:
+  - host: 34-102-166-235.nip.io  # GKE-specific: nip.io domain for IP 34.102.166.235
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              number: 80

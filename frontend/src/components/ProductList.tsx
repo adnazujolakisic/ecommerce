@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Product, CartItem } from '../types'
 import { getProducts, searchProducts, getProductsByCategory, getInventory } from '../api'
+import { Card, CardContent, CardHeader, CardTitle, Button, Badge, SearchInput, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, buttonVariants } from '@metalbear/ui'
 
 interface ProductListProps {
   addToCart: (item: CartItem) => void
@@ -111,73 +112,91 @@ export default function ProductList({ addToCart }: ProductListProps) {
     })
   }
 
-  if (loading) return <div className="loading">Loading products...</div>
-  if (error) return <div className="error">{error}</div>
-
   return (
-    <div className="product-list-page">
-      <div className="filters">
-        <div className="search-bar">
-          <input
-            type="text"
+    <div className="pt-20 pb-8 max-w-[1200px] mx-auto product-list-container">
+      <div className="search-filters-bar flex gap-4 mb-8 flex-wrap justify-center">
+        <div className="flex gap-2 items-center flex-nowrap">
+          <SearchInput
             placeholder="Search products..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            onClear={() => setSearch('')}
+            className="w-[600px] max-w-[640px]"
           />
-          <button onClick={handleSearch}>Search</button>
-        </div>
-        <div className="category-filter">
-          <select value={category} onChange={(e) => setCategory(e.target.value)}>
-            <option value="all">All Categories</option>
-            <option value="t-shirts">T-Shirts</option>
-            <option value="hoodies">Hoodies</option>
-            <option value="accessories">Accessories</option>
-          </select>
+          <Button className={buttonVariants({ variant: "brand" })} onClick={handleSearch}>Search</Button>
+          <Select value={category} onValueChange={setCategory}>
+          <SelectTrigger className="min-w-[200px]">
+            <SelectValue placeholder="All Categories" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Categories</SelectItem>
+            <SelectItem value="t-shirts">T-Shirts</SelectItem>
+            <SelectItem value="hoodies">Hoodies</SelectItem>
+            <SelectItem value="accessories">Accessories</SelectItem>
+          </SelectContent>
+        </Select>
         </div>
       </div>
 
-      <div className="product-grid">
-        {products.map(product => (
-          <div key={product.id} className="product-card">
-            <Link to={`/products/${product.id}`}>
-              <div className="product-image">
-                <img src={product.image_url} alt={product.name} />
+      {error && (
+        <div className="p-8 text-center text-destructive">{error}</div>
+      )}
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {loading ? (
+          <div className="col-span-full p-8 text-center">Loading products...</div>
+        ) : (
+        products.map(product => (
+          <Card key={product.id} className="flex flex-col">
+            <Link to={`/products/${product.id}`} className="text-inherit no-underline">
+              <div className="aspect-[3/4] overflow-hidden flex items-center justify-center bg-muted">
+                <img 
+                  src={product.image_url} 
+                  alt={product.name} 
+                  className="w-full h-full object-cover" 
+                />
               </div>
             </Link>
-            <div className="product-info">
-              <Link to={`/products/${product.id}`}>
-                <h3>{product.name}</h3>
-              </Link>
-              <p className="product-category">{product.category}</p>
-              <div className="product-price-row">
-                <p className="product-price">${product.price.toFixed(2)}</p>
-                <p className="product-stock">
-                  {product.stock !== undefined ? (
-                    product.stock > 0 ? (
-                      <span className="in-stock-badge">{product.stock} in stock</span>
-                    ) : (
-                      <span className="out-of-stock-badge">Out of stock</span>
-                    )
-                  ) : (
-                    <span className="stock-loading">Loading...</span>
-                  )}
+            <CardHeader>
+              <CardTitle>
+                <Link to={`/products/${product.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                  {product.name}
+                </Link>
+              </CardTitle>
+              <p className="text-sm text-muted-foreground my-2">{product.category}</p>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4 flex-1">
+              <div className="flex justify-between items-center">
+                <p className="text-xl font-bold m-0">
+                  ${product.price.toFixed(2)}
                 </p>
+                {product.stock !== undefined ? (
+                  product.stock > 0 ? (
+                    <Badge style={{ backgroundColor: 'hsl(var(--brand-yellow))', color: '#222222' }}>
+                      {product.stock} in stock
+                    </Badge>
+                  ) : (
+                    <Badge>Out of stock</Badge>
+                  )
+                ) : (
+                  <Badge>Loading...</Badge>
+                )}
               </div>
-              <button
-                className="add-to-cart-btn"
+              <Button
+                className={`${buttonVariants({ variant: "brand-primary" })} w-full`}
                 onClick={() => handleAddToCart(product)}
                 disabled={product.stock === 0}
               >
                 {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
-              </button>
-            </div>
-          </div>
-        ))}
+              </Button>
+            </CardContent>
+          </Card>
+        ))
+        )}
       </div>
 
-      {products.length === 0 && (
-        <p className="no-products">No products found</p>
+      {!loading && products.length === 0 && (
+        <p className="p-8 text-center">No products found</p>
       )}
     </div>
   )

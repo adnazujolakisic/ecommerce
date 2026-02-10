@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { CartItem, ShippingAddress } from '../types'
+import { Button, buttonVariants } from '@metalbear/ui'
 import { checkout } from '../api'
 
 interface CheckoutProps {
@@ -167,9 +168,9 @@ export default function Checkout({ cart, clearCart }: CheckoutProps) {
 
           {error && <div className="checkout-error">{error}</div>}
 
-          <button type="submit" className="place-order-btn" disabled={loading}>
+          <Button type="submit" className={buttonVariants({ variant: "brand-primary" })} disabled={loading} style={{ width: '100%' }}>
             {loading ? 'Processing...' : `Place Order - $${total.toFixed(2)}`}
-          </button>
+          </Button>
         </form>
 
         <div className="order-summary">

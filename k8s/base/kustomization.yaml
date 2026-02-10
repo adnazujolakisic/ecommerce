@@ -17,3 +17,4 @@ resources:
   - order-processor/deployment.yaml
   - frontend/deployment.yaml
   - frontend/ingress.yaml
+  - frontend/managedcertificate.yaml
