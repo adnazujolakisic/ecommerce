@@ -5,23 +5,24 @@ resources:
   - ../../base
 
 # Note: PROJECT_ID will be replaced by deploy-gke.sh script
-# Or set it manually: sed -i 's/PROJECT_ID/your-project-id/g' k8s/overlays/gke/kustomization.yaml
+# Using Artifact Registry instead of GCR (modern approach)
+# Format: LOCATION-docker.pkg.dev/PROJECT_ID/REPOSITORY/IMAGE
 images:
   - name: metalmart/catalogue
-    newName: gcr.io/PROJECT_ID/metalmart/catalogue
+    newName: us-docker.pkg.dev/PROJECT_ID/metalmart/catalogue
     newTag: latest
   - name: metalmart/inventory
-    newName: gcr.io/PROJECT_ID/metalmart/inventory
+    newName: us-docker.pkg.dev/PROJECT_ID/metalmart/inventory
     newTag: latest
   - name: metalmart/checkout
-    newName: gcr.io/PROJECT_ID/metalmart/checkout
+    newName: us-docker.pkg.dev/PROJECT_ID/metalmart/checkout
     newTag: latest
   - name: metalmart/order
-    newName: gcr.io/PROJECT_ID/metalmart/order
+    newName: us-docker.pkg.dev/PROJECT_ID/metalmart/order
     newTag: latest
   - name: metalmart/order-processor
-    newName: gcr.io/PROJECT_ID/metalmart/order-processor
+    newName: us-docker.pkg.dev/PROJECT_ID/metalmart/order-processor
     newTag: latest
   - name: metalmart/frontend
-    newName: gcr.io/PROJECT_ID/metalmart/frontend
+    newName: us-docker.pkg.dev/PROJECT_ID/metalmart/frontend
     newTag: latest

@@ -10,6 +10,8 @@ env:
   GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   GKE_CLUSTER: metalmart-cluster
   GKE_ZONE: us-central1-a
+  AR_LOCATION: us
+  AR_REPOSITORY: metalmart
 
 jobs:
   build-and-push:
@@ -26,41 +28,41 @@ jobs:
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      - name: Configure Docker for GCR
-        run: gcloud auth configure-docker --quiet
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker $AR_LOCATION-docker.pkg.dev --quiet
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
       - name: Build and push catalogue
         run: |
-          docker build -t gcr.io/$GCP_PROJECT_ID/metalmart/catalogue:latest services/catalogue/
-          docker push gcr.io/$GCP_PROJECT_ID/metalmart/catalogue:latest
+          docker build -t $AR_LOCATION-docker.pkg.dev/$GCP_PROJECT_ID/$AR_REPOSITORY/catalogue:latest services/catalogue/
+          docker push $AR_LOCATION-docker.pkg.dev/$GCP_PROJECT_ID/$AR_REPOSITORY/catalogue:latest
 
       - name: Build and push inventory
         run: |
-          docker build -t gcr.io/$GCP_PROJECT_ID/metalmart/inventory:latest services/inventory/
-          docker push gcr.io/$GCP_PROJECT_ID/metalmart/inventory:latest
+          docker build -t $AR_LOCATION-docker.pkg.dev/$GCP_PROJECT_ID/$AR_REPOSITORY/inventory:latest services/inventory/
+          docker push $AR_LOCATION-docker.pkg.dev/$GCP_PROJECT_ID/$AR_REPOSITORY/inventory:latest
 
       - name: Build and push checkout
         run: |
-          docker build -t gcr.io/$GCP_PROJECT_ID/metalmart/checkout:latest services/checkout/
-          docker push gcr.io/$GCP_PROJECT_ID/metalmart/checkout:latest
+          docker build -t $AR_LOCATION-docker.pkg.dev/$GCP_PROJECT_ID/$AR_REPOSITORY/checkout:latest services/checkout/
+          docker push $AR_LOCATION-docker.pkg.dev/$GCP_PROJECT_ID/$AR_REPOSITORY/checkout:latest
 
       - name: Build and push order
         run: |
-          docker build -t gcr.io/$GCP_PROJECT_ID/metalmart/order:latest services/order/
-          docker push gcr.io/$GCP_PROJECT_ID/metalmart/order:latest
+          docker build -t $AR_LOCATION-docker.pkg.dev/$GCP_PROJECT_ID/$AR_REPOSITORY/order:latest services/order/
+          docker push $AR_LOCATION-docker.pkg.dev/$GCP_PROJECT_ID/$AR_REPOSITORY/order:latest
 
       - name: Build and push order-processor
         run: |
-          docker build -t gcr.io/$GCP_PROJECT_ID/metalmart/order-processor:latest services/order-processor/
-          docker push gcr.io/$GCP_PROJECT_ID/metalmart/order-processor:latest
+          docker build -t $AR_LOCATION-docker.pkg.dev/$GCP_PROJECT_ID/$AR_REPOSITORY/order-processor:latest services/order-processor/
+          docker push $AR_LOCATION-docker.pkg.dev/$GCP_PROJECT_ID/$AR_REPOSITORY/order-processor:latest
 
       - name: Build and push frontend
         run: |
-          docker build -t gcr.io/$GCP_PROJECT_ID/metalmart/frontend:latest frontend/
-          docker push gcr.io/$GCP_PROJECT_ID/metalmart/frontend:latest
+          docker build -t $AR_LOCATION-docker.pkg.dev/$GCP_PROJECT_ID/$AR_REPOSITORY/frontend:latest frontend/
+          docker push $AR_LOCATION-docker.pkg.dev/$GCP_PROJECT_ID/$AR_REPOSITORY/frontend:latest
 
       - name: Update kustomization with project ID
         run: |
@@ -95,6 +97,7 @@ jobs:
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
+        if: secrets.GCP_SA_KEY != ''
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
