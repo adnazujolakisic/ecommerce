@@ -1,6 +1,10 @@
 import axios from 'axios'
 import { Product, Order, CheckoutResponse, CartItem, ShippingAddress } from './types'
 
+// For mirrord DB branching demo: set VITE_INVENTORY_API=http://localhost:18082 so getInventory
+// hits your local branch. Other APIs go through Vite proxy (VITE_PROXY_TARGET=minikube URL).
+const inventoryBase = import.meta.env.VITE_INVENTORY_API ?? ''
+
 const api = axios.create({ baseURL: '' })
 
 export const getProducts = async (): Promise<Product[]> => {
@@ -24,7 +28,10 @@ export const getProductsByCategory = async (category: string): Promise<Product[]
 }
 
 export const getInventory = async (productId: string): Promise<{ stock_quantity: number; reserved_quantity: number }> => {
-  const { data } = await api.get(`/api/inventory/${productId}`)
+  const url = inventoryBase
+    ? `${inventoryBase.replace(/\/$/, '')}/api/inventory/${productId}`
+    : `/api/inventory/${productId}`
+  const { data } = await axios.get(url)
   return data
 }
 

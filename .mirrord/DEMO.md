@@ -346,6 +346,48 @@ kubectl port-forward -n metalmart svc/frontend 3000:80
 
 Shows how Mirrord creates isolated database copies so you can debug without affecting the shared database.
 
+**Which database is used:** The inventory service logs and adds an `X-Database-Source` header (`cluster` vs `mirrord-db-branch`) so you can see at a glance which database responded.
+
+### Before/After Script
+
+Use port **18082** for mirrord so it doesn't conflict with any port-forward:
+
+```bash
+# Terminal 1: Start mirrord (port 18082)
+cd services/inventory && PORT=18082 mirrord exec -f ../../.mirrord/db-branching.json -- go run .
+
+# Terminal 2: Compare cluster vs your branch
+./scripts/show-db-demo.sh          # product 1 (default)
+./scripts/show-db-demo.sh 2        # product 2
+```
+
+**Demo flow:**
+1. Run the script (before) – cluster and branch show same stock
+2. **Make a direct change to your branch:** `curl -X POST http://localhost:18082/api/inventory/reserve -H "Content-Type: application/json" -d '{"items":[{"productId":"1","quantity":5}]}'`
+3. Run the script again – your branch shows reduced stock; cluster stays the same
+
+**Frontend uses your branch:** Use **steal** mode so all inventory traffic goes to your local process:
+```bash
+cd services/inventory && mirrord exec -f ../../.mirrord/db-branching-steal.json -- go run .
+```
+Now when you place an order via the frontend, it hits YOUR branch—reserve/confirm go to your local process.
+
+**Note:** With mirror mode (default `db-branching.json`), orders from the frontend go to both cluster and your local copy. With steal mode (`db-branching-steal.json`), ALL inventory traffic goes to you—frontend uses your branch only.
+
+**Frontend always shows branch inventory:** Run the frontend locally so product list fetches from your branch:
+```bash
+# Terminal 1: mirrord (inventory on 18082)
+cd services/inventory && mirrord exec -f ../../.mirrord/db-branching-steal.json -- go run .
+
+# Terminal 2: minikube tunnel (get the URL, e.g. http://127.0.0.1:55587)
+minikube service frontend -n metalmart
+
+# Terminal 3: frontend with branch display (use URL from Terminal 2)
+cd frontend && VITE_PROXY_TARGET=http://127.0.0.1:55587 VITE_INVENTORY_API=http://localhost:18082 npm run dev
+# Open http://localhost:5173 - product list shows your branch, checkout uses steal
+```
+Or run `./scripts/mirrord-steal-demo.sh` for setup, then follow the printed instructions.
+
 ### Setup
 
 ```bash
@@ -408,10 +450,10 @@ Set breakpoints at these lines in `services/inventory/`:
 **Option 2: Terminal (Works without extension)**
 1. **Set your breakpoints in VSCode** (click left of line numbers in the files mentioned above)
 2. **Open terminal in VSCode** (Ctrl+` or View → Terminal)
-3. **Run from terminal:**
+3. **Run from terminal** (port 18082 avoids conflict with port-forward):
    ```bash
-   cd /Users/adna/Desktop/ecommerce/services/inventory
-   mirrord exec -f ../../.mirrord/db-branching.json -- go run .
+   cd services/inventory
+   PORT=18082 mirrord exec -f ../../.mirrord/db-branching.json -- go run .
    ```
 4. **Breakpoints work automatically** - VSCode attaches to the debugger when you run `go run`
 5. **Don't click "Run and Debug" button** - just use the terminal command above
@@ -466,7 +508,7 @@ kubectl port-forward -n metalmart svc/frontend 3000:80
 cd /Users/adna/Desktop/ecommerce/services/inventory
 
 # This creates an isolated database branch
-mirrord exec -f ../../.mirrord/db-branching.json -- go run .
+PORT=18082 mirrord exec -f ../../.mirrord/db-branching.json -- go run .
 ```
 
 **Terminal 2: Make Changes**
@@ -651,7 +693,7 @@ mirrord exec -f ../../.mirrord/queue-splitting.json -- go run .
 
 # Test database branching
 cd services/inventory
-mirrord exec -f ../../.mirrord/db-branching.json -- go run .
+PORT=18082 mirrord exec -f ../../.mirrord/db-branching.json -- go run .
 
 # Test steal mode
 cd services/inventory

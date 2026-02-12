@@ -61,9 +61,12 @@ export default function Checkout({ cart, clearCart }: CheckoutProps) {
       } else {
         setError(response.message || 'Checkout failed')
       }
-    } catch (err) {
-      setError('Checkout failed. Please try again.')
-      console.error(err)
+    } catch (err: unknown) {
+      const msg = err && typeof err === 'object' && 'response' in err
+        ? (err as { response?: { data?: { message?: string }; status?: number } }).response?.data?.message
+        : err instanceof Error ? err.message : 'Network or server error'
+      setError(msg || 'Checkout failed. Please try again.')
+      console.error('Checkout error:', err)
     } finally {
       setLoading(false)
     }

@@ -5,6 +5,9 @@ This directory contains application-dependent scripts and helper utilities.
 ## Structure
 
 - **`load-generator.go` / `load-generator.sh`** - Load testing tools (app-dependent)
+- **`show-db-demo.sh`** - Compare cluster vs mirrord DB branch inventory (before/after demo)
+- **`mirrord-steal-demo.sh`** - Setup for steal mode: scale inventory, restart checkout, then run mirrord + frontend with branch display
+- **`setup-mirrord-monitoring.sh`** - Install Loki, Promtail, Grafana for mirrord operator dashboards (see `k8s/monitoring/README.md`)
 - **`helpers/`** - Development and deployment utility scripts
   - See [helpers/README.md](helpers/README.md) for details
 

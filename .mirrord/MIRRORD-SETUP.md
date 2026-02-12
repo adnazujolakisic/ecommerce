@@ -255,6 +255,7 @@ helm install mirrord-operator mirrord/mirrord-operator \
   --set license.key=<KEY> \
   --set operator.kafkaSplitting=true \
   --set operator.dbBranching=true \
+  --set operator.jsonLog=true \
   -n mirrord --create-namespace
 ```
 
@@ -283,6 +284,29 @@ mirrord exec --config-file ../../.mirrord/db-branching.json -- go run main.go
 
 ---
 
+## Step 7: Monitoring (Optional - Team/Enterprise)
+
+For mirrord operator dashboards in Grafana:
+
+1. **Enable JSON logging** (requires Team/Enterprise plan):
+   ```bash
+   helm upgrade mirrord-operator mirrord/mirrord-operator \
+     --set license.key=<YOUR_LICENSE_KEY> \
+     --set operator.kafkaSplitting=true \
+     --set operator.dbBranching=true \
+     --set operator.jsonLog=true \
+     -n mirrord
+   ```
+
+2. **Install monitoring stack** (Loki, Promtail, Grafana):
+   ```bash
+   MIRRORD_LICENSE_KEY=<KEY> ./scripts/setup-mirrord-monitoring.sh
+   ```
+
+3. **Import dashboard** - See `k8s/monitoring/README.md`
+
+---
+
 ## Next Steps
 
 Once operator is installed and verified:
@@ -291,3 +315,4 @@ Once operator is installed and verified:
 2. **Test Database Branching** - See `MIRRORD-FEATURES-DEMO.md`
 3. **Run Load Generator** - See `DEMO.md`
 4. **Start Demo** - See `DEMO.md`
+5. **Monitoring** - See `k8s/monitoring/README.md`

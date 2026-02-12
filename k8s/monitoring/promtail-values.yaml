@@ -1,0 +1,21 @@
+# Promtail values for mirrord operator logs
+# Adds service_name="mirrord-operator" for dashboard queries
+# Used with: helm install promtail grafana/promtail -n monitoring -f k8s/monitoring/promtail-values.yaml
+
+config:
+  clients:
+    - url: http://loki-gateway.monitoring.svc.cluster.local/loki/api/v1/push
+  snippets:
+    # Add service_name for mirrord-operator pods (required by mirrord dashboard)
+    # Matches: pod name "mirrord-operator-*" OR controller "mirrord-operator-*"
+    extraRelabelConfigs:
+      - source_labels: [__meta_kubernetes_pod_name]
+        regex: "mirrord-operator.*"
+        target_label: service_name
+        replacement: "mirrord-operator"
+        action: replace
+      - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_pod_controller_name]
+        regex: "mirrord;mirrord-operator-(.+)"
+        target_label: service_name
+        replacement: "mirrord-operator"
+        action: replace

@@ -21,6 +21,10 @@ func main() {
 	if dbURL == "" {
 		dbURL = "postgres://postgres:postgres@localhost:5432/inventory?sslmode=disable"
 	}
+	// Debug: show which DB host we're connecting to (mirrord branch vs cluster)
+	if host := extractDBHost(dbURL); host != "" {
+		log.Printf("DB connection host: %s", host)
+	}
 	// Ensure sslmode=disable for db branching compatibility
 	if !strings.Contains(dbURL, "sslmode=") {
 		if strings.Contains(dbURL, "?") {
@@ -48,7 +52,11 @@ func main() {
 		log.Printf("Warning: Failed to seed inventory from catalogue: %v", err)
 	}
 
-	h := handlers.NewHandler(db)
+	dbSource := "cluster"
+	if os.Getenv("MIRRORD_DB_BRANCH") == "true" {
+		dbSource = "mirrord-db-branch"
+	}
+	h := handlers.NewHandler(db, dbSource)
 
 	r := mux.NewRouter()
 
@@ -66,10 +74,26 @@ func main() {
 
 	handler := corsMiddleware(r)
 
-	log.Printf("Inventory service starting on port %s", port)
+	if dbSource == "mirrord-db-branch" {
+		log.Printf("📦 Database: MIRRORD DB BRANCH (isolated copy - your changes don't affect cluster)")
+	} else {
+		log.Printf("📦 Database: CLUSTER (shared production database)")
+	}
+	log.Printf("Inventory service starting on port %s [%s]", port, dbSource)
 	if err := http.ListenAndServe(":"+port, handler); err != nil {
 		log.Fatalf("Server failed: %v", err)
 	}
+}
+
+func extractDBHost(url string) string {
+	if i := strings.Index(url, "@"); i >= 0 && i+1 < len(url) {
+		rest := url[i+1:]
+		if j := strings.IndexAny(rest, ":/"); j >= 0 {
+			return rest[:j]
+		}
+		return rest
+	}
+	return ""
 }
 
 func corsMiddleware(next http.Handler) http.Handler {

@@ -1,0 +1,30 @@
+{
+  "target": {
+    "path": {
+      "deployment": "inventory"
+    },
+    "namespace": "metalmart"
+  },
+  "feature": {
+    "network": {
+      "incoming": {
+        "mode": "steal",
+        "http_filter": {
+          "header_filter": "X-Mirrord-Demo: true",
+          "ports": [8082]
+        }
+      },
+      "outgoing": {
+        "tcp": true,
+        "udp": true
+      },
+      "dns": true
+    },
+    "fs": "local",
+    "env": true
+  },
+  "operator": true,
+  "experimental": {
+    "browser_extension_config": true
+  }
+}
