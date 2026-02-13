@@ -11,7 +11,9 @@
         "mode": "steal",
         "http_filter": {
           "path_filter": "^(?!/health)",
-          "ports": [8082]
+          "ports": [
+            8082
+          ]
         }
       },
       "outgoing": {
@@ -23,7 +25,6 @@
     "fs": "local",
     "env": {
       "override": {
-        "PORT": "18082",
         "MIRRORD_DB_BRANCH": "true"
       }
     },
@@ -32,7 +33,7 @@
         "type": "pg",
         "version": "16",
         "name": "inventory",
-        "ttl_secs": 5,
+        "ttl_secs": 50,
         "creation_timeout_secs": 60,
         "connection": {
           "url": {
