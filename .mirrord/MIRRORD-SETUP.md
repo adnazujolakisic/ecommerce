@@ -254,7 +254,7 @@ kubectl delete -f k8s/base/infrastructure/mirrord-kafka.yaml
 helm install mirrord-operator mirrord/mirrord-operator \
   --set license.key=<KEY> \
   --set operator.kafkaSplitting=true \
-  --set operator.dbBranching=true \
+  --set operator.pgBranching=true \
   --set operator.jsonLog=true \
   -n mirrord --create-namespace
 ```
