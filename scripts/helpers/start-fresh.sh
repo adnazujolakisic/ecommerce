@@ -116,7 +116,17 @@ done
 echo "4. Deploying infrastructure (secrets, postgres, kafka)..."
 kubectl apply -f k8s/base/namespace.yaml
 kubectl apply -f k8s/base/infrastructure/secrets.yaml
-kubectl apply -f k8s/base/infrastructure/postgres.yaml
+
+# Apply postgres - handle PVC immutability (can't change storageClassName on existing PVC)
+OUTPUT=$(kubectl apply -f k8s/base/infrastructure/postgres.yaml 2>&1) || {
+  if echo "$OUTPUT" | grep -q "immutable\|Forbidden.*spec"; then
+    echo "   ⚠️  PVC unchanged (immutable) - other postgres resources applied"
+  else
+    echo "$OUTPUT"
+    exit 1
+  fi
+}
+
 kubectl apply -f k8s/base/infrastructure/kafka.yaml
 
 # Wait for infrastructure to be ready

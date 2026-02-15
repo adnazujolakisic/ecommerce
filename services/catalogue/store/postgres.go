@@ -43,18 +43,18 @@ func (s *PostgresStore) Migrate() error {
 	);
 	CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
 	CREATE INDEX IF NOT EXISTS idx_products_name ON products(name);
-	CREATE INDEX IF NOT EXISTS idx_products_display_order ON products(display_order);
 	`
 	if _, err := s.db.Exec(query); err != nil {
 		return err
 	}
-	// Add display_order if migrating from old schema (Postgres 9.6+)
+	// Add display_order if migrating from old schema (before it existed)
 	_, _ = s.db.Exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS display_order INT DEFAULT 99")
-	// Set display order for featured products (Polo, Sticker, Mug first)
-	_, _ = s.db.Exec(`UPDATE products SET display_order = 1 WHERE id = '7'`)
+	_, _ = s.db.Exec("CREATE INDEX IF NOT EXISTS idx_products_display_order ON products(display_order)")
+	// Set display order for featured products (Mug, Sticker, T-Shirt first)
+	_, _ = s.db.Exec(`UPDATE products SET display_order = 1 WHERE id = '5'`)
 	_, _ = s.db.Exec(`UPDATE products SET display_order = 2 WHERE id = '6'`)
-	_, _ = s.db.Exec(`UPDATE products SET display_order = 3 WHERE id = '5'`)
-	_, _ = s.db.Exec(`UPDATE products SET display_order = 4 WHERE id = '1'`)
+	_, _ = s.db.Exec(`UPDATE products SET display_order = 3 WHERE id = '1'`)
+	_, _ = s.db.Exec(`UPDATE products SET display_order = 4 WHERE id = '7'`)
 	_, _ = s.db.Exec(`UPDATE products SET display_order = 5 WHERE id = '2'`)
 	_, _ = s.db.Exec(`UPDATE products SET display_order = 6 WHERE id = '3'`)
 	_, _ = s.db.Exec(`UPDATE products SET display_order = 7 WHERE id = '4'`)
@@ -85,12 +85,12 @@ func (s *PostgresStore) Seed() error {
 		displayOrder int
 	}{
 		{
-			id:           "7",
-			name:         "MetalBear Polo Shirt",
-			description:  "Professional polo shirt with subtle MetalBear branding. Perfect for when you need to look presentable but still rep your favorite tools.",
-			price:        44.99,
-			imageURL:     "/images/polo.webp",
-			category:     "t-shirts",
+			id:           "5",
+			name:         "MetalBear Mug - Debug with Coffee",
+			description:  "Large 15oz ceramic mug perfect for your morning coffee or late-night debugging fuel. Microwave and dishwasher safe.",
+			price:        14.99,
+			imageURL:     "/images/mug.webp",
+			category:     "accessories",
 			displayOrder: 1,
 		},
 		{
@@ -103,20 +103,20 @@ func (s *PostgresStore) Seed() error {
 			displayOrder: 2,
 		},
 		{
-			id:           "5",
-			name:         "MetalBear Mug - Debug with Coffee",
-			description:  "Large 15oz ceramic mug perfect for your morning coffee or late-night debugging fuel. Microwave and dishwasher safe.",
-			price:        14.99,
-			imageURL:     "/images/mug.webp",
-			category:     "accessories",
-			displayOrder: 3,
-		},
-		{
 			id:           "1",
 			name:         "MetalBear Classic T-Shirt",
 			description:  "Classic black t-shirt featuring the iconic MetalBear logo. Made from 100% organic cotton for maximum comfort during those long debugging sessions.",
 			price:        29.99,
 			imageURL:     "/images/tshirt-classic.webp",
+			category:     "t-shirts",
+			displayOrder: 3,
+		},
+		{
+			id:           "7",
+			name:         "MetalBear Polo Shirt",
+			description:  "Professional polo shirt with subtle MetalBear branding. Perfect for when you need to look presentable but still rep your favorite tools.",
+			price:        44.99,
+			imageURL:     "/images/polo.webp",
 			category:     "t-shirts",
 			displayOrder: 4,
 		},
