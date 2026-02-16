@@ -135,16 +135,31 @@ func (s *PostgresStore) CreateOrder(req models.CreateOrderRequest) (*models.Orde
 }
 
 func (s *PostgresStore) GetOrder(id string) (*models.Order, error) {
+	order, err := s.getOrderByQuery(`SELECT id, order_number, customer_email, customer_name, shipping_address, total_amount, status, tracking_token, created_at, updated_at FROM orders WHERE id = $1`, id)
+	if err != nil {
+		return nil, err
+	}
+	s.fillProcessorSource(order, true, id)
+	return order, nil
+}
+
+func (s *PostgresStore) GetOrderByToken(token string) (*models.Order, error) {
+	order, err := s.getOrderByQuery(`SELECT id, order_number, customer_email, customer_name, shipping_address, total_amount, status, tracking_token, created_at, updated_at FROM orders WHERE tracking_token = $1`, token)
+	if err != nil {
+		return nil, err
+	}
+	s.fillProcessorSource(order, false, token)
+	return order, nil
+}
+
+func (s *PostgresStore) getOrderByQuery(query string, arg interface{}) (*models.Order, error) {
 	var order models.Order
 	var addressJSON []byte
 
-	err := s.db.QueryRow(`
-		SELECT id, order_number, customer_email, customer_name, shipping_address, total_amount, status, tracking_token, processor_source, source_topic, created_at, updated_at
-		FROM orders WHERE id = $1
-	`, id).Scan(
+	err := s.db.QueryRow(query, arg).Scan(
 		&order.ID, &order.OrderNumber, &order.CustomerEmail, &order.CustomerName,
 		&addressJSON, &order.TotalAmount, &order.Status, &order.TrackingToken,
-		&order.ProcessedBy, &order.SourceTopic, &order.CreatedAt, &order.UpdatedAt,
+		&order.CreatedAt, &order.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
@@ -161,36 +176,17 @@ func (s *PostgresStore) GetOrder(id string) (*models.Order, error) {
 	return &order, nil
 }
 
-func (s *PostgresStore) GetOrderByToken(token string) (*models.Order, error) {
-	var order models.Order
-	var addressJSON []byte
-
-	err := s.db.QueryRow(`
-		SELECT id, order_number, customer_email, customer_name, shipping_address, total_amount, status, tracking_token, processor_source, source_topic, created_at, updated_at
-		FROM orders WHERE tracking_token = $1
-	`, token).Scan(
-		&order.ID, &order.OrderNumber, &order.CustomerEmail, &order.CustomerName,
-		&addressJSON, &order.TotalAmount, &order.Status, &order.TrackingToken,
-		&order.ProcessedBy, &order.SourceTopic, &order.CreatedAt, &order.UpdatedAt,
-	)
-	if err != nil {
-		return nil, err
+func (s *PostgresStore) fillProcessorSource(order *models.Order, byID bool, val string) {
+	col := "tracking_token"
+	if byID {
+		col = "id"
 	}
-
-	json.Unmarshal(addressJSON, &order.ShippingAddress)
-
-	items, err := s.getOrderItems(order.ID)
-	if err != nil {
-		return nil, err
-	}
-	order.Items = items
-
-	return &order, nil
+	_ = s.db.QueryRow(`SELECT COALESCE(processor_source, ''), COALESCE(source_topic, '') FROM orders WHERE `+col+` = $1`, val).Scan(&order.ProcessedBy, &order.SourceTopic)
 }
 
 func (s *PostgresStore) ListOrders() ([]models.Order, error) {
 	rows, err := s.db.Query(`
-		SELECT id, order_number, customer_email, customer_name, shipping_address, total_amount, status, tracking_token, processor_source, source_topic, created_at, updated_at
+		SELECT id, order_number, customer_email, customer_name, shipping_address, total_amount, status, tracking_token, created_at, updated_at
 		FROM orders ORDER BY created_at DESC LIMIT 100
 	`)
 	if err != nil {
@@ -203,7 +199,7 @@ func (s *PostgresStore) ListOrders() ([]models.Order, error) {
 
 func (s *PostgresStore) ListOrdersByEmail(email string) ([]models.Order, error) {
 	rows, err := s.db.Query(`
-		SELECT id, order_number, customer_email, customer_name, shipping_address, total_amount, status, tracking_token, processor_source, source_topic, created_at, updated_at
+		SELECT id, order_number, customer_email, customer_name, shipping_address, total_amount, status, tracking_token, created_at, updated_at
 		FROM orders WHERE customer_email = $1 ORDER BY created_at DESC
 	`, email)
 	if err != nil {
@@ -222,12 +218,13 @@ func (s *PostgresStore) scanOrders(rows *sql.Rows) ([]models.Order, error) {
 		err := rows.Scan(
 			&order.ID, &order.OrderNumber, &order.CustomerEmail, &order.CustomerName,
 			&addressJSON, &order.TotalAmount, &order.Status, &order.TrackingToken,
-			&order.ProcessedBy, &order.SourceTopic, &order.CreatedAt, &order.UpdatedAt,
+			&order.CreatedAt, &order.UpdatedAt,
 		)
 		if err != nil {
 			return nil, err
 		}
 		json.Unmarshal(addressJSON, &order.ShippingAddress)
+		_ = s.db.QueryRow(`SELECT COALESCE(processor_source, ''), COALESCE(source_topic, '') FROM orders WHERE id = $1`, order.ID).Scan(&order.ProcessedBy, &order.SourceTopic)
 		orders = append(orders, order)
 	}
 	if orders == nil {
@@ -268,8 +265,12 @@ func (s *PostgresStore) GetOrderStatus(id string) (string, error) {
 }
 
 func (s *PostgresStore) GetOrderStatusWithSource(id string) (status, processedBy, sourceTopic string, err error) {
-	err = s.db.QueryRow(`SELECT status, COALESCE(processor_source, ''), COALESCE(source_topic, '') FROM orders WHERE id = $1`, id).Scan(&status, &processedBy, &sourceTopic)
-	return
+	err = s.db.QueryRow(`SELECT status FROM orders WHERE id = $1`, id).Scan(&status)
+	if err != nil {
+		return "", "", "", err
+	}
+	_ = s.db.QueryRow(`SELECT COALESCE(processor_source, ''), COALESCE(source_topic, '') FROM orders WHERE id = $1`, id).Scan(&processedBy, &sourceTopic)
+	return status, processedBy, sourceTopic, nil
 }
 
 func (s *PostgresStore) UpdateOrderStatus(id, status, processorSource, sourceTopic string) error {
