@@ -115,6 +115,10 @@ func (h *ConsumerHandler) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 			continue
 		}
 
+		if b, _ := json.MarshalIndent(event, "", "  "); len(b) > 0 {
+			log.Printf("Received from Kafka: %s", string(b))
+		}
+
 		if err := h.processor.ProcessOrder(event, msg.Topic); err != nil {
 			log.Printf("Failed to process order %s: %v", event.OrderID, err)
 		}

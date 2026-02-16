@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"strings"
 
@@ -42,6 +43,10 @@ func (h *Handler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if b, _ := json.MarshalIndent(order, "", "  "); len(b) > 0 {
+		log.Printf("Order created and inserted: %s", string(b))
+	}
+
 	if h.producer != nil {
 		event := models.OrderCreatedEvent{
 			OrderID:       order.ID,
@@ -53,7 +58,9 @@ func (h *Handler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 		}
 		if err := h.producer.PublishOrderCreated(event); err != nil {
 			// Log but don't fail the request
-			println("Warning: Failed to publish order created event:", err.Error())
+			log.Printf("Warning: Failed to publish order created event: %v", err)
+		} else if b, _ := json.MarshalIndent(event, "", "  "); len(b) > 0 {
+			log.Printf("Published to Kafka: %s", string(b))
 		}
 	}
 
