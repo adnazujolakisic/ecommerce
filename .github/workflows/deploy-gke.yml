@@ -204,8 +204,8 @@ jobs:
         if: needs.detect-changes.outputs.k8s == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           kubectl wait --for=condition=ready pod -l app=postgres -n metalmart --timeout=90s || true
-          kubectl wait --for=condition=ready pod -l app=zookeeper -n metalmart --timeout=90s || true
-          kubectl wait --for=condition=ready pod -l app=kafka -n metalmart --timeout=90s || true
+          kubectl wait --for=condition=ready pod -l app=zookeeper -n metalmart --timeout=120s || true
+          kubectl wait --for=condition=ready pod -l app=kafka -n metalmart --timeout=180s || true
 
       - name: Update kustomization with project ID (deploy job)
         run: |
