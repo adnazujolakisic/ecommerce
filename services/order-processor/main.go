@@ -127,35 +127,13 @@ func (h *ConsumerHandler) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 func (p *OrderProcessor) ProcessOrder(event OrderCreatedEvent, kafkaTopic string) error {
 	log.Printf("Processing order %s (order number: %s) [Kafka topic: %s]", event.OrderID, event.OrderNumber, kafkaTopic)
 
-	// Demo mode: faster processing for load testing
-	// Set DEMO_MODE=true to reduce delays
-	demoMode := os.Getenv("DEMO_MODE") == "true"
-	
-	var steps []struct {
+	steps := []struct {
 		status string
 		delay  time.Duration
-	}
-	
-	if demoMode {
-		// Fast processing for demo: 200ms per step
-		steps = []struct {
-			status string
-			delay  time.Duration
-		}{
-			{"processing", 200 * time.Millisecond},
-			{"confirmed", 200 * time.Millisecond},
-			{"shipped", 200 * time.Millisecond},
-		}
-	} else {
-		// Normal processing
-		steps = []struct {
-			status string
-			delay  time.Duration
-		}{
-			{"processing", 2 * time.Second},
-			{"confirmed", 3 * time.Second},
-			{"shipped", 5 * time.Second},
-		}
+	}{
+		{"processing", 2 * time.Second},
+		{"confirmed", 2 * time.Second},
+		{"shipped", 2 * time.Second},
 	}
 
 	for _, step := range steps {
@@ -185,9 +163,11 @@ func (p *OrderProcessor) updateOrderStatus(orderID, status, kafkaTopic string) e
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	// Signal to Order Service that this update came from Kafka (mirrord queue splitting)
-	req.Header.Set("X-Processor-Source", "mirrord-kafka")
-	req.Header.Set("X-Kafka-Topic", kafkaTopic)
+	// Only signal mirrord when consuming from mirrord's temp topic (queue splitting)
+	if strings.Contains(kafkaTopic, "mirrord-tmp") {
+		req.Header.Set("X-Processor-Source", "mirrord-kafka")
+		req.Header.Set("X-Kafka-Topic", kafkaTopic)
+	}
 
 	resp, err := p.httpClient.Do(req)
 	if err != nil {

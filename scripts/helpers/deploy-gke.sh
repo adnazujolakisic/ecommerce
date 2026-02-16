@@ -84,10 +84,6 @@ else
   echo "   ⚠️  Mirrord operator not installed - skipping Kafka resources"
 fi
 
-# 7. Enable demo mode
-echo "8. Enabling demo mode..."
-kubectl set env deployment/order-processor -n metalmart DEMO_MODE=true
-
 # 8. Wait for pods
 echo ""
 echo "Waiting for pods to be ready..."

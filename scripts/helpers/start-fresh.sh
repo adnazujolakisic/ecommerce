@@ -160,10 +160,6 @@ else
   echo "     To install: helm install mirrord-operator mirrord/mirrord-operator --set license.key=<KEY> --set operator.kafkaSplitting=true -n mirrord --create-namespace"
 fi
 
-# 7. Enable demo mode
-echo "7. Enabling demo mode..."
-kubectl set env deployment/order-processor -n metalmart DEMO_MODE=true
-
 echo ""
 echo "Waiting for pods to be ready..."
 kubectl wait --for=condition=ready pod -l app=catalogue -n metalmart --timeout=120s || true

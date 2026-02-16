@@ -235,9 +235,6 @@ jobs:
           done
           kubectl rollout status deployment/frontend -n metalmart --timeout=120s || true
 
-      - name: Enable demo mode
-        run: |
-          kubectl set env deployment/order-processor -n metalmart DEMO_MODE=true || true
 
       - name: Seed inventory
         run: |
