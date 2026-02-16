@@ -38,8 +38,8 @@ var products = []string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "10"}
 var names = []string{"Alice", "Bob", "Charlie", "Diana", "Eve", "Frank", "Grace", "Henry"}
 
 func main() {
-	rate := 10
-	duration := 60
+	rate := 1
+	duration := 3
 	baseURL := "http://localhost:8084"
 
 	if len(os.Args) > 1 {

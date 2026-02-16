@@ -26,10 +26,12 @@ We'll go **frontend → order → Kafka → processor**. You'll see the message 
 
 | # | Where | What you'll show the client |
 |---|-------|----------------------------|
-| 1 | `services/order/handlers/handlers.go` — **Line 29** `h.store.CreateOrder(req)` | *"The order just landed at our API and got saved to the database."* |
-| 2 | `services/order/handlers/handlers.go` — **Line 44** `h.producer.PublishOrderCreated(event)` | *"We're publishing to Kafka. The API is done — the customer gets their confirmation immediately."* |
-| 3 | `services/order-processor/main.go` — **Line 109** `log.Printf("Received message...")` | *"The processor picked up the message from Kafka. No one waited — it's async."* |
-| 4 | `services/order-processor/main.go` — **Line 164** `p.updateOrderStatus(...)` | *"Each status transition: processing → confirmed → shipped. Watch it step through."* |
+| 1 | `services/order/handlers/handlers.go` — `h.store.CreateOrder(req)` | *"The order just landed at our API and got saved to the database."* |
+| 2 | `services/order/handlers/handlers.go` — `h.producer.PublishOrderCreated(event)` | *"We're publishing to Kafka. The API is done — the customer gets their confirmation immediately."* |
+| **2b** | `services/order/kafka/producer.go` — `p.producer.SendMessage(msg)` | *"The Kafka message — inspect `msg` (topic, key, value, headers) right before it's sent."* |
+| 3 | `services/order-processor/main.go` — `log.Printf("Received message...")` | *"The processor picked up the message from Kafka. Inspect raw `msg` (topic, partition, offset)."* |
+| **3b** | `services/order-processor/main.go` — `h.processor.ProcessOrder(event, msg.Topic)` | *"The deserialized Kafka event. Inspect `event` — order_id, email, amount — ready to process."* |
+| 4 | `services/order-processor/main.go` — `p.updateOrderStatus(...)` | *"Each status transition: processing → confirmed → shipped. Watch it step through."* |
 
 ### The Walkthrough
 
@@ -41,6 +43,8 @@ We'll go **frontend → order → Kafka → processor**. You'll see the message 
 6. **Continue** → Breakpoint 3 hits. *"Processor got the message."*
 7. **Continue** → Breakpoint 4 hits multiple times — each status step.
 8. **Open the tracking link** — the status bar fills in live as the processor works.
+
+**Note:** Breakpoints 1, 2, 2b require the Order Service to be running locally (e.g. with `order.json` + mirrord). If Order Service stays in the cluster, you'll only hit 3, 3b, 4 in your session — that's enough to show the Kafka consumer side.
 
 ### Nice touches to mention
 
