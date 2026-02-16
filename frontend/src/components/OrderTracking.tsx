@@ -93,7 +93,14 @@ export default function OrderTracking() {
         <h2>Order Details</h2>
         <div className="detail-row">
           <span>Status:</span>
-          <span className={`status-badge status-${order.status}`}>{order.status}</span>
+          <div className="status-badges">
+            <span className={`status-badge status-${order.status}`}>{order.status}</span>
+            {order.source === 'mirrord' && (
+              <span className="source-badge source-mirrord" title={order.source_topic}>
+                ⚡ Processed via Kafka (mirrord)
+              </span>
+            )}
+          </div>
         </div>
         <div className="detail-row">
           <span>Total:</span>
@@ -103,6 +110,14 @@ export default function OrderTracking() {
           <span>Ordered:</span>
           <span>{new Date(order.created_at).toLocaleDateString()}</span>
         </div>
+        {order.source === 'mirrord' && order.source_topic && (
+          <div className="detail-row kafka-topic-row">
+            <span>Kafka topic:</span>
+            <code className="source-topic" title="Temp topic created by mirrord queue splitting">
+              {order.source_topic}
+            </code>
+          </div>
+        )}
 
         <h3>Items</h3>
         <div className="order-items">

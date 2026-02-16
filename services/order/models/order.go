@@ -11,6 +11,9 @@ type Order struct {
 	TotalAmount     float64        `json:"total_amount"`
 	Status          string         `json:"status"`
 	TrackingToken   string         `json:"tracking_token"`
+	ProcessedBy     string         `json:"processed_by,omitempty"`
+	SourceTopic     string         `json:"source_topic,omitempty"`
+	Source          string         `json:"source,omitempty"` // "mirrord" or "cluster"
 	Items           []OrderItem    `json:"items,omitempty"`
 	CreatedAt       time.Time      `json:"created_at"`
 	UpdatedAt       time.Time      `json:"updated_at"`

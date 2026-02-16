@@ -62,6 +62,20 @@ Customer places order → Order Service → Kafka → Order Processor → Status
 7. **Continue** → **Hit breakpoint 4 multiple times** — *"Watch the status update in real-time"*
 8. **Click the tracking link** on the confirmation page — the tracking page polls every 2s and the status bar fills up live: `pending → processing → confirmed → shipped`
 
+### Show mirrord-Created Topics (CLI)
+
+When queue splitting is active, mirrord creates temporary Kafka topics. List them:
+
+```bash
+# All topics
+kubectl exec -n metalmart deploy/kafka -- kafka-topics --bootstrap-server localhost:9092 --list
+
+# Only mirrord temp topics
+./scripts/list-kafka-topics.sh
+```
+
+You'll see topics like `mirrord-tmp-<id>-order.created` — those are the extra topics mirrord creates.
+
 ### Key Moments to Highlight
 
 - **After breakpoint 2**: The frontend already shows confirmation — the API didn't wait for processing

@@ -61,7 +61,14 @@ func (s *PostgresStore) Migrate() error {
 	);
 	CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id);
 	`
-	_, err := s.db.Exec(query)
+	if _, err := s.db.Exec(query); err != nil {
+		return err
+	}
+	// Add processor_source and source_topic for mirrord/Kafka queue splitting demo visibility
+	if _, err := s.db.Exec(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS processor_source VARCHAR(100)`); err != nil {
+		return err
+	}
+	_, err := s.db.Exec(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS source_topic VARCHAR(255)`)
 	return err
 }
 
@@ -132,12 +139,12 @@ func (s *PostgresStore) GetOrder(id string) (*models.Order, error) {
 	var addressJSON []byte
 
 	err := s.db.QueryRow(`
-		SELECT id, order_number, customer_email, customer_name, shipping_address, total_amount, status, tracking_token, created_at, updated_at
+		SELECT id, order_number, customer_email, customer_name, shipping_address, total_amount, status, tracking_token, processor_source, source_topic, created_at, updated_at
 		FROM orders WHERE id = $1
 	`, id).Scan(
 		&order.ID, &order.OrderNumber, &order.CustomerEmail, &order.CustomerName,
 		&addressJSON, &order.TotalAmount, &order.Status, &order.TrackingToken,
-		&order.CreatedAt, &order.UpdatedAt,
+		&order.ProcessedBy, &order.SourceTopic, &order.CreatedAt, &order.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
@@ -159,12 +166,12 @@ func (s *PostgresStore) GetOrderByToken(token string) (*models.Order, error) {
 	var addressJSON []byte
 
 	err := s.db.QueryRow(`
-		SELECT id, order_number, customer_email, customer_name, shipping_address, total_amount, status, tracking_token, created_at, updated_at
+		SELECT id, order_number, customer_email, customer_name, shipping_address, total_amount, status, tracking_token, processor_source, source_topic, created_at, updated_at
 		FROM orders WHERE tracking_token = $1
 	`, token).Scan(
 		&order.ID, &order.OrderNumber, &order.CustomerEmail, &order.CustomerName,
 		&addressJSON, &order.TotalAmount, &order.Status, &order.TrackingToken,
-		&order.CreatedAt, &order.UpdatedAt,
+		&order.ProcessedBy, &order.SourceTopic, &order.CreatedAt, &order.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
@@ -183,7 +190,7 @@ func (s *PostgresStore) GetOrderByToken(token string) (*models.Order, error) {
 
 func (s *PostgresStore) ListOrders() ([]models.Order, error) {
 	rows, err := s.db.Query(`
-		SELECT id, order_number, customer_email, customer_name, shipping_address, total_amount, status, tracking_token, created_at, updated_at
+		SELECT id, order_number, customer_email, customer_name, shipping_address, total_amount, status, tracking_token, processor_source, source_topic, created_at, updated_at
 		FROM orders ORDER BY created_at DESC LIMIT 100
 	`)
 	if err != nil {
@@ -196,7 +203,7 @@ func (s *PostgresStore) ListOrders() ([]models.Order, error) {
 
 func (s *PostgresStore) ListOrdersByEmail(email string) ([]models.Order, error) {
 	rows, err := s.db.Query(`
-		SELECT id, order_number, customer_email, customer_name, shipping_address, total_amount, status, tracking_token, created_at, updated_at
+		SELECT id, order_number, customer_email, customer_name, shipping_address, total_amount, status, tracking_token, processor_source, source_topic, created_at, updated_at
 		FROM orders WHERE customer_email = $1 ORDER BY created_at DESC
 	`, email)
 	if err != nil {
@@ -215,7 +222,7 @@ func (s *PostgresStore) scanOrders(rows *sql.Rows) ([]models.Order, error) {
 		err := rows.Scan(
 			&order.ID, &order.OrderNumber, &order.CustomerEmail, &order.CustomerName,
 			&addressJSON, &order.TotalAmount, &order.Status, &order.TrackingToken,
-			&order.CreatedAt, &order.UpdatedAt,
+			&order.ProcessedBy, &order.SourceTopic, &order.CreatedAt, &order.UpdatedAt,
 		)
 		if err != nil {
 			return nil, err
@@ -260,7 +267,16 @@ func (s *PostgresStore) GetOrderStatus(id string) (string, error) {
 	return status, err
 }
 
-func (s *PostgresStore) UpdateOrderStatus(id, status string) error {
+func (s *PostgresStore) GetOrderStatusWithSource(id string) (status, processedBy, sourceTopic string, err error) {
+	err = s.db.QueryRow(`SELECT status, COALESCE(processor_source, ''), COALESCE(source_topic, '') FROM orders WHERE id = $1`, id).Scan(&status, &processedBy, &sourceTopic)
+	return
+}
+
+func (s *PostgresStore) UpdateOrderStatus(id, status, processorSource, sourceTopic string) error {
+	if processorSource != "" {
+		_, err := s.db.Exec(`UPDATE orders SET status = $1, processor_source = $2, source_topic = $3, updated_at = NOW() WHERE id = $4`, status, processorSource, sourceTopic, id)
+		return err
+	}
 	_, err := s.db.Exec(`UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2`, status, id)
 	return err
 }

@@ -766,6 +766,20 @@ a {
   margin-bottom: 0.5rem;
 }
 
+.confirmation-mirrord-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  margin: 1rem 0;
+}
+
+.confirmation-mirrord-badge .source-topic-hint {
+  font-family: ui-monospace, monospace;
+  font-size: 0.75rem;
+  color: #6b21a8;
+}
+
 .confirmation-details {
   color: #666;
   margin: 2rem 0;
@@ -897,6 +911,37 @@ a {
 .status-confirmed { background: #d1fae5; color: #065f46; }
 .status-shipped { background: #E4E3FD; color: #756DF3; }
 .status-delivered { background: #d1fae5; color: #065f46; }
+
+.status-badges {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.source-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+}
+
+.source-badge.source-mirrord {
+  background: linear-gradient(135deg, #756DF3 0%, #9f7aea 100%);
+  color: white;
+  font-weight: 500;
+}
+
+.kafka-topic-row .source-topic {
+  font-family: ui-monospace, monospace;
+  font-size: 0.8rem;
+  background: #f3f4f6;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  color: #6b21a8;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 .order-items .order-item {
   display: flex;

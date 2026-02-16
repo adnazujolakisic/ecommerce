@@ -115,7 +115,7 @@ func (h *ConsumerHandler) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 			continue
 		}
 
-		if err := h.processor.ProcessOrder(event); err != nil {
+		if err := h.processor.ProcessOrder(event, msg.Topic); err != nil {
 			log.Printf("Failed to process order %s: %v", event.OrderID, err)
 		}
 
@@ -124,8 +124,8 @@ func (h *ConsumerHandler) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 	return nil
 }
 
-func (p *OrderProcessor) ProcessOrder(event OrderCreatedEvent) error {
-	log.Printf("Processing order %s (order number: %s)", event.OrderID, event.OrderNumber)
+func (p *OrderProcessor) ProcessOrder(event OrderCreatedEvent, kafkaTopic string) error {
+	log.Printf("Processing order %s (order number: %s) [Kafka topic: %s]", event.OrderID, event.OrderNumber, kafkaTopic)
 
 	// Demo mode: faster processing for load testing
 	// Set DEMO_MODE=true to reduce delays
@@ -161,7 +161,7 @@ func (p *OrderProcessor) ProcessOrder(event OrderCreatedEvent) error {
 	for _, step := range steps {
 		time.Sleep(step.delay)
 
-		if err := p.updateOrderStatus(event.OrderID, step.status); err != nil {
+		if err := p.updateOrderStatus(event.OrderID, step.status, kafkaTopic); err != nil {
 			log.Printf("Failed to update order %s to status %s: %v", event.OrderID, step.status, err)
 			return err
 		}
@@ -173,7 +173,7 @@ func (p *OrderProcessor) ProcessOrder(event OrderCreatedEvent) error {
 	return nil
 }
 
-func (p *OrderProcessor) updateOrderStatus(orderID, status string) error {
+func (p *OrderProcessor) updateOrderStatus(orderID, status, kafkaTopic string) error {
 	body, _ := json.Marshal(map[string]string{"status": status})
 
 	req, err := http.NewRequest(
@@ -185,6 +185,9 @@ func (p *OrderProcessor) updateOrderStatus(orderID, status string) error {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	// Signal to Order Service that this update came from Kafka (mirrord queue splitting)
+	req.Header.Set("X-Processor-Source", "mirrord-kafka")
+	req.Header.Set("X-Kafka-Topic", kafkaTopic)
 
 	resp, err := p.httpClient.Do(req)
 	if err != nil {

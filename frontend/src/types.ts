@@ -33,6 +33,9 @@ export interface Order {
   total_amount: number
   status: string
   tracking_token: string
+  processed_by?: string
+  source_topic?: string
+  source?: string // "mirrord" | "cluster"
   items: OrderItem[]
   created_at: string
   updated_at: string

@@ -3,12 +3,22 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/metalbear-co/metalmart/services/order/kafka"
 	"github.com/metalbear-co/metalmart/services/order/models"
 	"github.com/metalbear-co/metalmart/services/order/store"
 )
+
+// setOrderSource computes and sets Source ("mirrord" or "cluster") on the order.
+func setOrderSource(order *models.Order) {
+	if order.ProcessedBy == "mirrord-kafka" || strings.Contains(order.SourceTopic, "mirrord-tmp") {
+		order.Source = "mirrord"
+	} else {
+		order.Source = "cluster"
+	}
+}
 
 type Handler struct {
 	store    *store.PostgresStore
@@ -62,6 +72,7 @@ func (h *Handler) GetOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	setOrderSource(order)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(order)
 }
@@ -76,6 +87,7 @@ func (h *Handler) GetOrderByToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	setOrderSource(order)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(order)
 }
@@ -97,6 +109,9 @@ func (h *Handler) ListOrders(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	for i := range orders {
+		setOrderSource(&orders[i])
+	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(orders)
 }
@@ -105,14 +120,23 @@ func (h *Handler) GetOrderStatus(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
 
-	status, err := h.store.GetOrderStatus(id)
+	status, processedBy, sourceTopic, err := h.store.GetOrderStatusWithSource(id)
 	if err != nil {
 		http.Error(w, "Order not found", http.StatusNotFound)
 		return
 	}
 
+	resp := map[string]string{"status": status}
+	if processedBy != "" {
+		resp["processed_by"] = processedBy
+		resp["source_topic"] = sourceTopic
+		resp["source"] = "mirrord"
+	} else {
+		resp["source"] = "cluster"
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": status})
+	json.NewEncoder(w).Encode(resp)
 }
 
 func (h *Handler) UpdateOrderStatus(w http.ResponseWriter, r *http.Request) {
@@ -125,11 +149,25 @@ func (h *Handler) UpdateOrderStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.store.UpdateOrderStatus(id, req.Status); err != nil {
+	processorSource := r.Header.Get("X-Processor-Source")
+	sourceTopic := r.Header.Get("X-Kafka-Topic")
+
+	if err := h.store.UpdateOrderStatus(id, req.Status, processorSource, sourceTopic); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	resp := map[string]string{"status": req.Status}
+	if processorSource != "" {
+		resp["processed_by"] = processorSource
+		resp["source_topic"] = sourceTopic
+		resp["source"] = "mirrord"
+		w.Header().Set("X-Processed-By", processorSource)
+		w.Header().Set("X-Source-Topic", sourceTopic)
+	} else {
+		resp["source"] = "cluster"
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": req.Status})
+	json.NewEncoder(w).Encode(resp)
 }
