@@ -33,7 +33,7 @@
         "type": "pg",
         "version": "16",
         "name": "inventory",
-        "ttl_secs": 50,
+        "ttl_secs": 5,
         "creation_timeout_secs": 60,
         "connection": {
           "url": {
@@ -41,9 +41,12 @@
             "variable": "DATABASE_URL"
           }
         },
-        "copy": {
-          "mode": "all"
+      "copy": {
+        "mode": "schema",
+        "tables": {
+          "inventory": {"filter": "product_id IN ('1','2','3')"}
         }
+      }
       }
     ]
   },

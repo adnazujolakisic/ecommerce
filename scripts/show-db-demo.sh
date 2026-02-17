@@ -16,19 +16,13 @@ echo ""
 
 echo "📦 CLUSTER (production database):"
 echo "-----------------------------------"
-CLUSTER_OUT=$(kubectl exec -n metalmart deployment/inventory -- curl -s http://localhost:8082/api/inventory/$PRODUCT_ID 2>/dev/null)
-if echo "$CLUSTER_OUT" | grep -q "product_id"; then
-  echo "  (via inventory pod)"
-  echo "  $CLUSTER_OUT"
+# Always query main Postgres directly - the inventory pod may return branch data when mirrord steal is active
+CLUSTER_DB=$(kubectl exec -n metalmart deployment/postgres -- psql -U postgres -d inventory -t -A -c "SELECT json_build_object('product_id',product_id,'stock_quantity',stock_quantity,'reserved_quantity',reserved_quantity) FROM inventory WHERE product_id='$PRODUCT_ID';" 2>/dev/null | tr -d '\n' | head -1)
+if [ -n "$CLUSTER_DB" ]; then
+  echo "  (via main postgres)"
+  echo "  $CLUSTER_DB"
 else
-  # Fallback: query main Postgres directly (works when inventory pod scaled down or unreachable)
-  CLUSTER_DB=$(kubectl exec -n metalmart deployment/postgres -- psql -U postgres -d inventory -t -A -c "SELECT json_build_object('product_id',product_id,'stock_quantity',stock_quantity,'reserved_quantity',reserved_quantity) FROM inventory WHERE product_id='$PRODUCT_ID';" 2>/dev/null | tr -d '\n' | head -1)
-  if [ -n "$CLUSTER_DB" ]; then
-    echo "  (via postgres)"
-    echo "  $CLUSTER_DB"
-  else
-    echo "  (could not reach cluster - is postgres running?)"
-  fi
+  echo "  (could not reach cluster postgres)"
 fi
 echo ""
 

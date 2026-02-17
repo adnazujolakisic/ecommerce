@@ -167,9 +167,8 @@ func (p *OrderProcessor) updateOrderStatus(orderID, status, kafkaTopic string) e
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	// Only signal mirrord when consuming from mirrord's filtered topic (not fallback).
-	// Fallback topic = cluster-processed orders; filtered topic = local mirrord session.
-	if strings.Contains(kafkaTopic, "mirrord-tmp") && !strings.Contains(kafkaTopic, "fallback") {
+	// Only signal mirrord when consuming from mirrord's temp topic (queue splitting)
+	if strings.Contains(kafkaTopic, "mirrord-tmp") {
 		req.Header.Set("X-Processor-Source", "mirrord-kafka")
 		req.Header.Set("X-Kafka-Topic", kafkaTopic)
 	}

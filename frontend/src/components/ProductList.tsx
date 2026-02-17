@@ -45,12 +45,10 @@ export default function ProductList({ addToCart }: ProductListProps) {
               stock: Math.max(0, availableStock) // Ensure non-negative
             }
           } catch (err) {
-            // If inventory fetch fails, log error but don't set stock to 0
-            // This way we can distinguish between "no stock" and "failed to fetch"
             console.error(`Failed to fetch inventory for product ${product.id}:`, err)
             return {
               ...product,
-              stock: undefined // Will show "Loading..." instead of "Out of stock"
+              stock: 0 // Show "Out of stock" when fetch fails (e.g. no row in DB branch)
             }
           }
         })
@@ -88,7 +86,7 @@ export default function ProductList({ addToCart }: ProductListProps) {
             console.error(`Failed to fetch inventory for product ${product.id}:`, err)
             return {
               ...product,
-              stock: undefined // Will show "Loading..." instead of "Out of stock"
+              stock: 0 // Show "Out of stock" when fetch fails (e.g. no row in DB branch)
             }
           }
         })
