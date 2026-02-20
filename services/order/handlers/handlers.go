@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -12,9 +13,16 @@ import (
 	"github.com/metalbear-co/metalmart/services/order/store"
 )
 
+// queueSplittingEmailFilter must match .mirrord/queue-splitting.json customer_email filter.
+// Only orders with matching emails are routed to mirrord's temp topic; only those should show the mirrord badge.
+var queueSplittingEmailFilter = regexp.MustCompile(`.*@metalbear\.com`)
+
 // setOrderSource computes and sets Source ("mirrord" or "cluster") on the order.
+// Mirrord badge only when: (a) processed by mirrord (processor_source/topic) AND (b) email matches queue-splitting filter.
 func setOrderSource(order *models.Order) {
-	if order.ProcessedBy == "mirrord-kafka" || strings.Contains(order.SourceTopic, "mirrord-tmp") {
+	isMirrordProcessed := order.ProcessedBy == "mirrord-kafka" || strings.Contains(order.SourceTopic, "mirrord-tmp")
+	emailMatchesFilter := order.CustomerEmail != "" && queueSplittingEmailFilter.MatchString(order.CustomerEmail)
+	if isMirrordProcessed && emailMatchesFilter {
 		order.Source = "mirrord"
 	} else {
 		order.Source = "cluster"
@@ -127,14 +135,16 @@ func (h *Handler) GetOrderStatus(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
 
-	status, processedBy, sourceTopic, err := h.store.GetOrderStatusWithSource(id)
+	status, processedBy, sourceTopic, customerEmail, err := h.store.GetOrderStatusWithSource(id)
 	if err != nil {
 		http.Error(w, "Order not found", http.StatusNotFound)
 		return
 	}
 
 	resp := map[string]string{"status": status}
-	if processedBy != "" {
+	isMirrordProcessed := processedBy == "mirrord-kafka" || strings.Contains(sourceTopic, "mirrord-tmp")
+	emailMatchesFilter := customerEmail != "" && queueSplittingEmailFilter.MatchString(customerEmail)
+	if isMirrordProcessed && emailMatchesFilter {
 		resp["processed_by"] = processedBy
 		resp["source_topic"] = sourceTopic
 		resp["source"] = "mirrord"

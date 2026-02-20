@@ -264,13 +264,15 @@ func (s *PostgresStore) GetOrderStatus(id string) (string, error) {
 	return status, err
 }
 
-func (s *PostgresStore) GetOrderStatusWithSource(id string) (status, processedBy, sourceTopic string, err error) {
-	err = s.db.QueryRow(`SELECT status FROM orders WHERE id = $1`, id).Scan(&status)
+func (s *PostgresStore) GetOrderStatusWithSource(id string) (status, processedBy, sourceTopic, customerEmail string, err error) {
+	err = s.db.QueryRow(`
+		SELECT status, COALESCE(customer_email, ''), COALESCE(processor_source, ''), COALESCE(source_topic, '')
+		FROM orders WHERE id = $1
+	`, id).Scan(&status, &customerEmail, &processedBy, &sourceTopic)
 	if err != nil {
-		return "", "", "", err
+		return "", "", "", "", err
 	}
-	_ = s.db.QueryRow(`SELECT COALESCE(processor_source, ''), COALESCE(source_topic, '') FROM orders WHERE id = $1`, id).Scan(&processedBy, &sourceTopic)
-	return status, processedBy, sourceTopic, nil
+	return status, processedBy, sourceTopic, customerEmail, nil
 }
 
 func (s *PostgresStore) UpdateOrderStatus(id, status, processorSource, sourceTopic string) error {

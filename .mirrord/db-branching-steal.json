@@ -10,10 +10,7 @@
       "incoming": {
         "mode": "steal",
         "http_filter": {
-          "path_filter": "^(?!/health)",
-          "ports": [
-            8082
-          ]
+          "header_filter": "X-PG-Tenant: Adna"
         }
       },
       "outgoing": {
@@ -41,20 +38,26 @@
             "variable": "DATABASE_URL"
           }
         },
-      "copy": {
-        "mode": "schema",
-        "tables": {
-          "inventory": {"filter": "product_id IN ('1','2','3')"}
+        "copy": {
+          "mode": "schema",
+          "tables": {
+            "inventory": {
+              "filter": "product_id IN ('5')"
+            }
+          }
         }
-      }
       }
     ]
   },
   "agent": {
-    "namespace": "metalmart"
+    "namespace": "metalmart",
+    "log_level": "debug"
   },
   "operator": true,
   "experimental": {
     "disable_reuseaddr": true
+  },
+  "external_proxy": {
+    "log_level": "mirrord=debug,warn"
   }
 }
