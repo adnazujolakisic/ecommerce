@@ -1,26 +1,27 @@
 {
-  "target": {"path": {"deployment": "inventory"}, "namespace": "metalmart"},
+  "target": { "path": { "deployment": "inventory" }, "namespace": "metalmart" },
   "feature": {
     "network": {
-      "incoming": {"mode": "steal", "http_filter": {"path_filter": "^(?!/health)", "ports": [8082]}},
-      "outgoing": {"tcp": true, "udp": true},
+      "incoming": {
+        "mode": "steal",
+        "http_filter": { "header_filter": "X-PG-Tenant: Adna" }
+      },
+      "outgoing": { "tcp": true, "udp": true },
       "dns": true
     },
     "fs": "local",
-    "env": {"override": {"MIRRORD_DB_BRANCH": "true"}},
+    "env": { "override": { "MIRRORD_DB_BRANCH": "true" } },
     "db_branches": [{
       "type": "pg",
       "version": "16",
       "name": "inventory",
-      "ttl_secs": 3,
+      "ttl_secs": 300,
       "creation_timeout_secs": 180,
-      "connection": {"url": {"type": "env", "variable": "DATABASE_URL"}},
-              "copy": {
-          "mode": "all"
-        }
+      "connection": { "url": { "type": "env", "variable": "DATABASE_URL" } },
+      "copy": { "mode": "all" }
     }]
   },
-  "agent": {"namespace": "metalmart"},
+  "agent": { "namespace": "metalmart" },
   "operator": true,
-  "experimental": {"disable_reuseaddr": true}
+  "experimental": { "disable_reuseaddr": true }
 }

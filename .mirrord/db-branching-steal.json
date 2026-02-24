@@ -30,8 +30,8 @@
         "type": "pg",
         "version": "16",
         "name": "inventory",
-        "ttl_secs": 5,
-        "creation_timeout_secs": 60,
+        "ttl_secs": 300,
+        "creation_timeout_secs": 380,
         "connection": {
           "url": {
             "type": "env",
