@@ -1,0 +1,29 @@
+{
+  "key":"key-metalmart-preview",
+  "target":{
+     "path":{
+        "deployment":"frontend"
+     },
+     "namespace":"metalmart"
+  },
+  "feature":{
+     "preview":{
+        "image":"YOUR_REGISTRY/metalmart/frontend:preview",
+        "ttl_mins":60
+     },
+     "network":{
+        "incoming":{
+           "mode":"steal",
+           "http_filter":{
+              "header_filter":"x-traffic: {{ key }}"
+           }
+        },
+        "outgoing":{
+           "tcp":true,
+           "udp":true
+        },
+        "dns":true
+     }
+  },
+  "operator":true
+}

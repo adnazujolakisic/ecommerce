@@ -67,12 +67,20 @@ export default function ProductDetail({ addToCart }: ProductDetailProps) {
           <p className="product-description">{product.description}</p>
           <p className="product-price">${product.price.toFixed(2)}</p>
 
-          <div className="stock-info">
+          <div className="stock-info flex items-center gap-2">
             {stock > 0 ? (
               <span className="in-stock">In Stock ({stock} available)</span>
             ) : (
               <span className="out-of-stock">Out of Stock</span>
             )}
+            <button
+              type="button"
+              className="text-sm underline text-muted-foreground hover:text-foreground"
+              onClick={() => id && loadProduct(id)}
+              disabled={loading}
+            >
+              Refresh
+            </button>
           </div>
 
           {stock > 0 && (

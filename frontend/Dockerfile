@@ -6,6 +6,8 @@ COPY package*.json ./
 RUN npm ci
 
 COPY . .
+ARG VITE_PREVIEW_ENV
+ENV VITE_PREVIEW_ENV=$VITE_PREVIEW_ENV
 RUN npm run build
 
 FROM nginx:alpine

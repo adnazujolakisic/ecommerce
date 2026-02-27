@@ -106,7 +106,9 @@ func (h *ConsumerHandler) Cleanup(_ sarama.ConsumerGroupSession) error { return 
 
 func (h *ConsumerHandler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	for msg := range claim.Messages() {
-		log.Printf("Received message: topic=%s partition=%d offset=%d", msg.Topic, msg.Partition, msg.Offset)
+		receivedAt := time.Now().Format("15:04:05.000")
+		log.Printf("[%s] Received message (status still pending): topic=%s partition=%d offset=%d",
+			receivedAt, msg.Topic, msg.Partition, msg.Offset)
 
 		var event OrderCreatedEvent
 		if err := json.Unmarshal(msg.Value, &event); err != nil {
@@ -119,6 +121,8 @@ func (h *ConsumerHandler) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 			log.Printf("Received from Kafka: %s", string(b))
 		}
 
+		log.Printf("Processing order %s (customer=%s) - will update status pending→processing→confirmed→shipped",
+			event.OrderNumber, event.CustomerEmail)
 		if err := h.processor.ProcessOrder(event, msg.Topic); err != nil {
 			log.Printf("Failed to process order %s: %v", event.OrderID, err)
 		}

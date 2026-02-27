@@ -140,6 +140,9 @@ export default function ProductList({ addToCart }: ProductListProps) {
       {error && (
         <div className="p-8 text-center text-destructive">{error}</div>
       )}
+      {import.meta.env.VITE_PREVIEW_ENV === 'true' && (
+        <p className="mb-4 text-muted-foreground">This is preview env</p>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {loading ? (
           <div className="col-span-full p-8 text-center">Loading products...</div>
