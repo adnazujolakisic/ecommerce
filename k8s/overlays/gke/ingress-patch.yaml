@@ -8,6 +8,20 @@ spec:
   - host: 34-102-166-235.nip.io  # GKE-specific: nip.io domain for IP 34.102.166.235
     http:
       paths:
+      - path: /visualization/api
+        pathType: Prefix
+        backend:
+          service:
+            name: visualization-backend
+            port:
+              number: 80
+      - path: /visualization
+        pathType: Prefix
+        backend:
+          service:
+            name: visualization-frontend
+            port:
+              number: 80
       - path: /
         pathType: Prefix
         backend:

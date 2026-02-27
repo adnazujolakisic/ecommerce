@@ -18,3 +18,7 @@ resources:
   - frontend/deployment.yaml
   - frontend/ingress.yaml
   - frontend/managedcertificate.yaml
+  # Visualization (architecture diagram + mirrord effect)
+  - visualization/backend-deployment.yaml
+  - visualization/backend-rbac.yaml
+  - visualization/frontend-deployment.yaml

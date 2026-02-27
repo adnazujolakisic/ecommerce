@@ -23,6 +23,7 @@ jobs:
       order: ${{ steps.filter.outputs.order }}
       order-processor: ${{ steps.filter.outputs.order-processor }}
       frontend: ${{ steps.filter.outputs.frontend }}
+      visualization: ${{ steps.filter.outputs.visualization }}
       k8s: ${{ steps.filter.outputs.k8s }}
     steps:
       - uses: actions/checkout@v4
@@ -44,6 +45,9 @@ jobs:
               - 'services/order-processor/**'
             frontend:
               - 'frontend/**'
+            visualization:
+              - 'visualization/**'
+              - 'visualization-backend/**'
             k8s:
               - 'k8s/**'
 
@@ -65,6 +69,10 @@ jobs:
             path: services/order-processor
           - name: frontend
             path: frontend
+          - name: visualization-frontend
+            path: visualization
+          - name: visualization-backend
+            path: visualization-backend
       fail-fast: false
     steps:
       - name: Checkout code
@@ -100,6 +108,8 @@ jobs:
             CHANGED="${{ needs.detect-changes.outputs.order-processor }}"
           elif [ "$SERVICE_NAME" = "frontend" ]; then
             CHANGED="${{ needs.detect-changes.outputs.frontend }}"
+          elif [ "$SERVICE_NAME" = "visualization-frontend" ] || [ "$SERVICE_NAME" = "visualization-backend" ]; then
+            CHANGED="${{ needs.detect-changes.outputs.visualization }}"
           fi
           
           if [ "$CHANGED" = "true" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
@@ -230,7 +240,7 @@ jobs:
 
       - name: Restart app deployments (pick up new images)
         run: |
-          for dep in frontend catalogue inventory checkout order order-processor; do
+          for dep in frontend catalogue inventory checkout order order-processor visualization-frontend visualization-backend; do
             kubectl rollout restart deployment/$dep -n metalmart 2>/dev/null || true
           done
           kubectl rollout status deployment/frontend -n metalmart --timeout=120s || true

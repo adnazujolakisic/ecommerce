@@ -26,6 +26,12 @@ images:
   - name: metalmart/frontend
     newName: us-docker.pkg.dev/mirrord-test-474620/metalmart/frontend
     newTag: latest
+  - name: metalmart/visualization-frontend
+    newName: us-docker.pkg.dev/mirrord-test-474620/metalmart/visualization-frontend
+    newTag: latest
+  - name: metalmart/visualization-backend
+    newName: us-docker.pkg.dev/mirrord-test-474620/metalmart/visualization-backend
+    newTag: latest
 
 # GKE-specific patches for ingress and SSL certificate
 patchesStrategicMerge:

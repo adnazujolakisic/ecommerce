@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: visualization-frontend
+  namespace: metalmart
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: visualization-frontend
+  template:
+    metadata:
+      labels:
+        app: visualization-frontend
+    spec:
+      containers:
+      - name: frontend
+        image: metalmart/visualization-frontend:latest
+        ports:
+        - containerPort: 3000
+          name: http
+        env:
+        - name: PORT
+          value: "3000"
+        - name: NEXT_BASE_PATH
+          value: "/visualization"
+        readinessProbe:
+          httpGet:
+            path: /visualization
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /visualization
+            port: 3000
+          initialDelaySeconds: 15
+          periodSeconds: 30
+        resources:
+          requests:
+            cpu: 50m
+            memory: 128Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: visualization-frontend
+  namespace: metalmart
+spec:
+  selector:
+    app: visualization-frontend
+  ports:
+  - name: http
+    port: 80
+    targetPort: 3000
