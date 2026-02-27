@@ -401,14 +401,14 @@ const computeBounds = (
 
 const LOCAL_ZONE_DEFAULT_OFFSET = { x: 520, y: 520 };
 const LOCAL_ZONE_ADJUSTMENT = { x: -400, y: 0 };
-const LOCAL_ZONE_GAP_Y = 220;
+const LOCAL_ZONE_GAP_Y = 80;  // Tighter gap so operator/local/DB branch feel grouped
 
 const EXTERNAL_USER_OFFSET_X = 240;
 const INGRESS_LEFT_SHIFT_X = 90;
 const EXTERNAL_USER_SHIFT_Y = 100;
 const INGRESS_SHIFT_Y = 100;
-const MIRRORD_OPERATOR_SHIFT_X = 180;
-const MIRRORD_OPERATOR_SHIFT_Y = 100;
+const MIRRORD_OPERATOR_SHIFT_X = 120;   // Slightly left, toward local/DB area
+const MIRRORD_OPERATOR_SHIFT_Y = 280;   // Move down toward local process and DB branch
 const MIRRORD_AGENT_SHIFT_X = 380;
 const MIRRORD_AGENT_SHIFT_Y = 100;
 
@@ -519,6 +519,15 @@ const DYNAMIC_LOCAL_SPACING_X =
 
 const sanitizeHostname = (hostname: string) =>
   hostname.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase();
+
+/** Map PgBranch targetDeployment to the corresponding postgres node id. */
+const targetDeploymentToPostgresNodeId = (targetDeployment: string): string => {
+  const lower = targetDeployment.toLowerCase();
+  if (lower.includes("catalogue")) return "postgres-catalogue";
+  if (lower.includes("inventory")) return "postgres-inventory";
+  if (lower.includes("order")) return "postgres-orders";
+  return "postgres-orders"; // fallback
+};
 
 /**
  * Build an index of possible string aliases for each architecture node so snapshot targets can be
@@ -1494,8 +1503,7 @@ export default function VisualizationPage({ useQueueSplittingMock, useDbBranchMo
 
     return pgBranches.map((branch, index) => {
       const nodeId = `pg-branch-${sanitizeHostname(branch.name)}`;
-      // Position near the target deployment's postgres node
-      const postgresNodeId = `postgres`;
+      const postgresNodeId = targetDeploymentToPostgresNodeId(branch.targetDeployment);
       const postgresPos = adjustedNodes.find((n) => n.id === postgresNodeId)?.position ?? { x: 0, y: 0 };
 
       return {
@@ -1567,10 +1575,10 @@ export default function VisualizationPage({ useQueueSplittingMock, useDbBranchMo
 
     for (const branch of pgBranches) {
       const nodeId = `pg-branch-${sanitizeHostname(branch.name)}`;
-      const postgresNodeId = `postgres`;
+      const postgresNodeId = targetDeploymentToPostgresNodeId(branch.targetDeployment);
       const agentId = `agent-${sanitizeHostname(branch.targetDeployment)}`;
 
-      // PgBranch → Postgres
+      // PgBranch → Postgres (target-specific: catalogue, inventory, orders)
       edges.push({
         id: `${nodeId}-to-${postgresNodeId}`,
         source: nodeId,

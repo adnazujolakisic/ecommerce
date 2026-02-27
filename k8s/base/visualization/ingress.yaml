@@ -1,13 +1,16 @@
-# Single Ingress for host; path order matters (GCE uses first match).
-# More specific paths MUST come before /.
+# Separate Ingress for visualization so path routing is explicit.
+# Uses same host as main frontend.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: frontend
+  name: visualization
   namespace: metalmart
+  annotations:
+    kubernetes.io/ingress.class: "gce"
+    networking.gke.io/managed-certificates: "frontend-cert"
 spec:
   rules:
-  - host: 34-102-166-235.nip.io  # GKE-specific: nip.io domain for IP 34.102.166.235
+  - host: 34-102-166-235.nip.io
     http:
       paths:
       - path: /visualization/api
@@ -22,12 +25,5 @@ spec:
         backend:
           service:
             name: visualization-frontend
-            port:
-              number: 80
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: frontend
             port:
               number: 80
