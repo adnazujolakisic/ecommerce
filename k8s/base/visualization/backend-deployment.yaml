@@ -27,6 +27,21 @@ spec:
           value: "metalmart"
         - name: WATCH_NAMESPACE
           value: "metalmart"
+        - name: PG_CATALOGUE_URL
+          valueFrom:
+            secretKeyRef:
+              name: db-secrets
+              key: catalogue-url
+        - name: PG_INVENTORY_URL
+          valueFrom:
+            secretKeyRef:
+              name: db-secrets
+              key: inventory-url
+        - name: PG_ORDERS_URL
+          valueFrom:
+            secretKeyRef:
+              name: db-secrets
+              key: orders-url
         readinessProbe:
           httpGet:
             path: /healthz
