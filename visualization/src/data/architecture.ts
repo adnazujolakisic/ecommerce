@@ -276,13 +276,6 @@ export const architectureEdges: ArchitectureEdge[] = [
     intent: "data",
   },
   {
-    id: "order-processor-to-order",
-    source: "order-processor",
-    target: "order",
-    label: "PUT /status",
-    intent: "request",
-  },
-  {
     id: "catalogue-to-postgres-catalogue",
     source: "catalogue",
     target: "postgres-catalogue",

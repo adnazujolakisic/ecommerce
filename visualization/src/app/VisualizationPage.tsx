@@ -116,7 +116,7 @@ const buildFlowEdges = (): Edge[] =>
   architectureEdges.map((edge) => {
     const intent = edge.intent ?? "default";
     const style = intentStyles[intent];
-    let edgeType: Edge["type"] = "smoothstep";
+    let edgeType: Edge["type"] = "bezier";
     let sourceHandle: string | undefined;
     let targetHandle: string | undefined;
 
@@ -452,7 +452,6 @@ const clusterAdjustedNodes = layoutedNodes.map((node) => {
       y: position.y + INGRESS_SHIFT_Y,
     };
   }
-
   if (node.id === "mirrord-operator") {
     position = {
       ...position,
@@ -498,7 +497,7 @@ const LOCAL_ZONE_OFFSET = (() => {
 })();
 
 /**
- * Apply local-zone offsets now that we have correct bounds from the cluster-adjusted nodes.
+ * Apply local-zone offsets.
  */
 const adjustedNodes = clusterAdjustedNodes.map((node) => {
   const zone = nodeZoneIndex.get(node.id);
@@ -884,6 +883,7 @@ export default function VisualizationPage({ useQueueSplittingMock, useDbBranchMo
     Map<string, { x: number; y: number }>
   >(() => new Map());
   const [dbDialogId, setDbDialogId] = useState<string | null>(null);
+  const reactFlowInstanceRef = useRef<{ fitView: (opts?: object) => void } | null>(null);
 
   // Keep the module-level ref in sync so ArchitectureNode can open the dialog.
   useEffect(() => {
@@ -1864,6 +1864,14 @@ export default function VisualizationPage({ useQueueSplittingMock, useDbBranchMo
     return nodes;
   }, [visibleArchitectureNodes, dynamicAgentNodes, dynamicClusterZoneNode, localYShift, kafkaTopicNodes, pgBranchNodes, previewSessionNodes, hasDynamicLocalMachines, hasShopSessions, dynamicLocalMachineNodes, dynamicLocalZoneNodes]);
 
+  // Re-center the diagram after mount (fixes initial offset)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      reactFlowInstanceRef.current?.fitView({ padding: 0.2 });
+    }, 200);
+    return () => clearTimeout(timer);
+  }, []);
+
   const snapshotBaseUrl = useMemo(() => {
     const base =
       process.env.NEXT_PUBLIC_VISUALIZATION_BACKEND_URL ?? "http://localhost:8080";
@@ -2099,7 +2107,9 @@ export default function VisualizationPage({ useQueueSplittingMock, useDbBranchMo
         style={{ width: "100%", height: "100%" }}
         nodes={flowNodes}
         edges={flowEdges}
+        onInit={(instance) => { reactFlowInstanceRef.current = instance; }}
         fitView
+        fitViewOptions={{ padding: 0.2, includeHiddenNodes: false }}
         minZoom={0.3}
         maxZoom={1.5}
         elevateEdgesOnSelect={false}
