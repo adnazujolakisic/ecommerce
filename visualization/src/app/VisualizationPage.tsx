@@ -1134,6 +1134,41 @@ export default function VisualizationPage({ useQueueSplittingMock, useDbBranchMo
     return nodes;
   }, [kafkaTopics, operatorSessions, dynamicNodePositions]);
 
+  // Unique local machines by sessionId: one Kafka splitting session = one laptop (fallback + filtered topics = same session)
+  const hasMultipleKafkaTopics = kafkaTopics.length > 1;
+  type LocalMachineEntry = { sessionId: string; ownerName: string; hostname: string };
+  const localMachineEntries = useMemo((): LocalMachineEntry[] => {
+    if (hasMultipleKafkaTopics) {
+      const uniqueBySession = new Map<string, LocalMachineEntry>();
+      for (const topic of kafkaTopics) {
+        if (!uniqueBySession.has(topic.sessionId)) {
+          const session = operatorSessions.find((s) => s.sessionId === topic.sessionId);
+          uniqueBySession.set(topic.sessionId, {
+            sessionId: topic.sessionId,
+            ownerName: session?.owner.username ?? "Unknown",
+            hostname: session?.owner.hostname ?? topic.sessionId,
+          });
+        }
+      }
+      return Array.from(uniqueBySession.values());
+    }
+    const uniqueHostnames = new Map<string, LocalMachineEntry>();
+    const shopSessions = operatorSessions.filter((s) => s.namespace === "metalmart" || s.namespace === "shop");
+    for (const session of shopSessions) {
+      if (!uniqueHostnames.has(session.owner.hostname)) {
+        uniqueHostnames.set(session.owner.hostname, {
+          sessionId: session.sessionId,
+          ownerName: session.owner.username,
+          hostname: session.owner.hostname,
+        });
+      }
+    }
+    if (uniqueHostnames.size > 1) {
+      return Array.from(uniqueHostnames.values());
+    }
+    return [];
+  }, [kafkaTopics, operatorSessions, hasMultipleKafkaTopics]);
+
   // Build dynamic edges for Kafka topic nodes.
   // Edges created:
   //   - Kafka producer → Operator (arrow from bottom of kafka to top of operator)
@@ -1195,12 +1230,13 @@ export default function VisualizationPage({ useQueueSplittingMock, useDbBranchMo
     }
 
     // KafkaEphemeralTopic → mirrord-layer (arrow from bottom of topic to layer)
-    // When multiple topics exist, each points to its own dynamic layer.
+    // When multiple topics exist, topics from the same host share one layer.
     kafkaTopics.forEach((topic, index) => {
       const nodeId = `kafka-topic-${topic.topicName}`;
-      const usesDynamicLocal = kafkaTopics.length > 1;
-      const targetLayer = usesDynamicLocal ? `dynamic-layer-${index}` : "mirrord-layer";
-      const targetHandle = usesDynamicLocal ? `dynamic-layer-${index}-target-top` : "layer-target-top";
+      const usesDynamicLocal = localMachineEntries.length > 1;
+      const layerIndex = localMachineEntries.findIndex((e) => e.sessionId === topic.sessionId);
+      const targetLayer = usesDynamicLocal ? `dynamic-layer-${layerIndex >= 0 ? layerIndex : index}` : "mirrord-layer";
+      const targetHandle = usesDynamicLocal ? `${targetLayer}-target-top` : "layer-target-top";
       edges.push({
         id: `${nodeId}-to-layer`,
         source: nodeId,
@@ -1259,7 +1295,7 @@ export default function VisualizationPage({ useQueueSplittingMock, useDbBranchMo
     });
 
     return edges;
-  }, [kafkaTopics, operatorSessions, aliasIndex]);
+  }, [kafkaTopics, operatorSessions, aliasIndex, localMachineEntries]);
 
   const hasShopSessions = agentGroups.length > 0;
 
@@ -1282,40 +1318,6 @@ export default function VisualizationPage({ useQueueSplittingMock, useDbBranchMo
     }
     return replaced;
   }, [kafkaTopics, operatorSessions, aliasIndex, baseEdges]);
-
-  // When there are multiple kafka topics, create per-topic local machine nodes
-  // (each with its own local-process and mirrord-layer).
-  // When there are no kafka topics but multiple unique hostnames in operator sessions,
-  // create per-hostname local machine nodes instead.
-  const hasMultipleKafkaTopics = kafkaTopics.length > 1;
-
-  type LocalMachineEntry = { ownerName: string; hostname: string };
-
-  const localMachineEntries = useMemo((): LocalMachineEntry[] => {
-    if (hasMultipleKafkaTopics) {
-      return kafkaTopics.map((topic) => {
-        const session = operatorSessions.find((s) => s.sessionId === topic.sessionId);
-        return {
-          ownerName: session?.owner.username ?? "Unknown",
-          hostname: session?.owner.hostname ?? "",
-        };
-      });
-    }
-    const uniqueHostnames = new Map<string, LocalMachineEntry>();
-    const shopSessions = operatorSessions.filter((s) => s.namespace === "metalmart" || s.namespace === "shop");
-    for (const session of shopSessions) {
-      if (!uniqueHostnames.has(session.owner.hostname)) {
-        uniqueHostnames.set(session.owner.hostname, {
-          ownerName: session.owner.username,
-          hostname: session.owner.hostname,
-        });
-      }
-    }
-    if (uniqueHostnames.size > 1) {
-      return Array.from(uniqueHostnames.values());
-    }
-    return [];
-  }, [kafkaTopics, operatorSessions, hasMultipleKafkaTopics]);
 
   const hasDynamicLocalMachines = localMachineEntries.length > 1;
 
