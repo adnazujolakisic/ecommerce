@@ -36,11 +36,11 @@ export const architectureZones: ArchitectureZone[] = [
   {
     id: "local",
     label: "Local Machine",
-    description: "Developer laptop running the binary with mirrord-layer inserted.",
+    description: "Your laptop — developer runs the binary with mirrord-layer inserted.",
     nodes: ["local-process", "mirrord-layer"],
-    border: "#60A5FA",
-    background: "rgba(191, 219, 254, 0.4)",
-    accent: "#3B82F6",
+    border: "#0284C7",
+    background: "rgba(224, 242, 254, 0.6)",
+    accent: "#0EA5E9",
   },
   {
     id: "cluster",

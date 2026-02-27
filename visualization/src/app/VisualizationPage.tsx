@@ -116,7 +116,7 @@ const buildFlowEdges = (): Edge[] =>
   architectureEdges.map((edge) => {
     const intent = edge.intent ?? "default";
     const style = intentStyles[intent];
-    let edgeType: Edge["type"] = "bezier";
+    let edgeType: Edge["type"] = "smoothstep";
     let sourceHandle: string | undefined;
     let targetHandle: string | undefined;
 
@@ -173,17 +173,33 @@ const buildFlowEdges = (): Edge[] =>
   });
 
 /**
- * Use dagre to compute an initial left-to-right layout for the architecture graph.
+ * Use dagre to compute layout. Increased spacing reduces edge overlap.
  */
 const getLayoutedElements = (nodes: Node<NodeData>[], edges: Edge[]) => {
   const dagreGraph = new dagre.graphlib.Graph();
   dagreGraph.setDefaultEdgeLabel(() => ({}));
-  dagreGraph.setGraph({ rankdir: "LR", nodesep: 120, ranksep: 240 });
+  dagreGraph.setGraph({
+    rankdir: "LR",
+    nodesep: 100,
+    ranksep: 280,
+    edgesep: 30,
+    align: "UL",
+  });
 
   nodes.forEach((node) =>
     dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight }),
   );
   edges.forEach((edge) => dagreGraph.setEdge(edge.source, edge.target));
+
+  // Layout-only constraints: order DBs left-to-right to reduce crossings
+  [
+    ["postgres-catalogue", "postgres-inventory"],
+    ["postgres-inventory", "postgres-orders"],
+  ].forEach(([src, tgt]) => {
+    if (nodes.some((n) => n.id === src) && nodes.some((n) => n.id === tgt)) {
+      dagreGraph.setEdge(src, tgt, { minlen: 0, weight: 0 });
+    }
+  });
 
   dagre.layout(dagreGraph);
 
@@ -218,6 +234,7 @@ type ZoneNodeData = {
   accent: string;
   zoneWidth: number;
   zoneHeight: number;
+  zoneId?: string;
 };
 
 type ClusterZoneNode = Node<ZoneNodeData, "zone">;
@@ -348,6 +365,7 @@ const buildZoneNodes = (nodes: Node<NodeData>[]): ClusterZoneNode[] => {
         accent: zone.accent,
         zoneWidth: computedWidth,
         zoneHeight: computedHeight,
+        zoneId: zone.id,
       },
       style: {
         width: computedWidth,
@@ -400,8 +418,8 @@ const computeBounds = (
 };
 
 const LOCAL_ZONE_DEFAULT_OFFSET = { x: 520, y: 520 };
-const LOCAL_ZONE_ADJUSTMENT = { x: -400, y: 0 };
-const LOCAL_ZONE_GAP_Y = 80;  // Tighter gap so operator/local/DB branch feel grouped
+const LOCAL_ZONE_ADJUSTMENT = { x: -520, y: 80 };  // Further left and down for clear separation
+const LOCAL_ZONE_GAP_Y = 200;  // Clear gap between GKE Cluster and Local Machine
 
 const EXTERNAL_USER_OFFSET_X = 240;
 const INGRESS_LEFT_SHIFT_X = 90;
@@ -659,10 +677,13 @@ const ArchitectureNode = ({ id, data }: NodeProps<Node<NodeData>>) => {
 
 /**
  * Presentational node used for cluster/local zones. Rendered as a non-interactive background card.
+ * Local Machine zone gets a thicker border and stronger background to separate from GKE.
  */
-const ZoneNode = ({ data }: NodeProps<ClusterZoneNode>) => (
+const ZoneNode = ({ data }: NodeProps<ClusterZoneNode>) => {
+  const isLocal = data.zoneId === "local";
+  return (
   <div
-    className="flex flex-col justify-between rounded-[40px] border border-dashed px-8 py-6"
+    className={`flex flex-col justify-between rounded-[40px] border px-8 py-6 ${isLocal ? "border-2 border-dashed" : "border border-dashed"}`}
     style={{
       width: data.zoneWidth,
       height: data.zoneHeight,
@@ -670,6 +691,7 @@ const ZoneNode = ({ data }: NodeProps<ClusterZoneNode>) => (
       background: data.background,
       color: "#0F172A",
       boxSizing: "border-box",
+      boxShadow: isLocal ? "0 4px 12px rgba(2, 132, 199, 0.15)" : undefined,
     }}
   >
     <div>
@@ -686,7 +708,8 @@ const ZoneNode = ({ data }: NodeProps<ClusterZoneNode>) => (
       style={{ backgroundColor: data.accent }}
     />
   </div>
-);
+  );
+};
 
 const handleStyle = { background: "#E66479", width: 8, height: 8 };
 
@@ -1467,11 +1490,12 @@ export default function VisualizationPage({ useQueueSplittingMock, useDbBranchMo
         data: {
           label: `Local Machine – ${ownerName}`,
           description: "Developer laptop running the binary with mirrord-layer inserted.",
-          background: "rgba(191, 219, 254, 0.4)",
-          border: "#60A5FA",
-          accent: "#3B82F6",
+          background: "rgba(224, 242, 254, 0.6)",
+          border: "#0284C7",
+          accent: "#0EA5E9",
           zoneWidth,
           zoneHeight,
+          zoneId: "local",
         },
         style: {
           width: zoneWidth,
