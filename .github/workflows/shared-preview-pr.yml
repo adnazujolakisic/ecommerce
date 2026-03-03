@@ -84,7 +84,7 @@ jobs:
           echo "Changed preview services: $json"
 
   build-and-start-preview:
-    if: github.event.action != 'closed' && contains(needs.detect-changes.outputs.changed_services, format('"{0}"', matrix.service))
+    if: github.event.action != 'closed'
     needs: detect-changes
     runs-on: ubuntu-latest
     strategy:
@@ -125,9 +125,11 @@ jobs:
             dockerfile: visualization-backend/Dockerfile
     steps:
       - name: Checkout
+        if: contains(needs.detect-changes.outputs.changed_services, format('"{0}"', matrix.service))
         uses: actions/checkout@v4
 
       - name: Verify required cluster secret
+        if: contains(needs.detect-changes.outputs.changed_services, format('"{0}"', matrix.service))
         env:
           KUBECONFIG_B64: ${{ secrets.KUBECONFIG_B64 }}
         run: |
@@ -137,6 +139,7 @@ jobs:
           fi
 
       - name: Configure kubeconfig
+        if: contains(needs.detect-changes.outputs.changed_services, format('"{0}"', matrix.service))
         env:
           KUBECONFIG_B64: ${{ secrets.KUBECONFIG_B64 }}
         run: |
@@ -145,9 +148,11 @@ jobs:
           chmod 600 "$HOME/.kube/config"
 
       - name: Set up Docker Buildx
+        if: contains(needs.detect-changes.outputs.changed_services, format('"{0}"', matrix.service))
         uses: docker/setup-buildx-action@v3
 
       - name: Resolve preview image URI
+        if: contains(needs.detect-changes.outputs.changed_services, format('"{0}"', matrix.service))
         id: image
         run: |
           registry="${PREVIEW_REGISTRY:-ghcr.io}"
@@ -161,7 +166,7 @@ jobs:
           echo "Preview image: $image_uri"
 
       - name: Login to GHCR
-        if: steps.image.outputs.registry == 'ghcr.io'
+        if: contains(needs.detect-changes.outputs.changed_services, format('"{0}"', matrix.service)) && steps.image.outputs.registry == 'ghcr.io'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -169,7 +174,7 @@ jobs:
           password: ${{ github.token }}
 
       - name: Verify custom registry credentials
-        if: steps.image.outputs.registry != 'ghcr.io'
+        if: contains(needs.detect-changes.outputs.changed_services, format('"{0}"', matrix.service)) && steps.image.outputs.registry != 'ghcr.io'
         env:
           PREVIEW_REGISTRY_USERNAME: ${{ secrets.PREVIEW_REGISTRY_USERNAME }}
           PREVIEW_REGISTRY_PASSWORD: ${{ secrets.PREVIEW_REGISTRY_PASSWORD }}
@@ -180,7 +185,7 @@ jobs:
           fi
 
       - name: Login to custom registry
-        if: steps.image.outputs.registry != 'ghcr.io'
+        if: contains(needs.detect-changes.outputs.changed_services, format('"{0}"', matrix.service)) && steps.image.outputs.registry != 'ghcr.io'
         uses: docker/login-action@v3
         with:
           registry: ${{ steps.image.outputs.registry }}
@@ -188,6 +193,7 @@ jobs:
           password: ${{ secrets.PREVIEW_REGISTRY_PASSWORD }}
 
       - name: Build and push preview image
+        if: contains(needs.detect-changes.outputs.changed_services, format('"{0}"', matrix.service))
         uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context }}
@@ -196,14 +202,17 @@ jobs:
           tags: ${{ steps.image.outputs.uri }}
 
       - name: Install mirrord
+        if: contains(needs.detect-changes.outputs.changed_services, format('"{0}"', matrix.service))
         run: |
           curl -fsSL https://raw.githubusercontent.com/metalbear-co/mirrord/main/scripts/install.sh | bash
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Verify mirrord config
+        if: contains(needs.detect-changes.outputs.changed_services, format('"{0}"', matrix.service))
         run: mirrord verify-config "$MIRRORD_CONFIG"
 
       - name: Start or update preview target
+        if: contains(needs.detect-changes.outputs.changed_services, format('"{0}"', matrix.service))
         run: |
           ttl="${PREVIEW_TTL_MINUTES:-120}"
           timeout="${PREVIEW_TIMEOUT_SECONDS:-600}"
