@@ -156,9 +156,17 @@ jobs:
             rm -rf aws awscliv2.zip
           fi
 
-      - uses: azure/use-kubelogin@v1
-        with:
-          kubelogin-version: v0.0.37
+      - name: Install kubelogin if required by kubeconfig
+        run: |
+          exec_cmds="$(jq -r '.users[]?.user.exec.command // empty' "$HOME/.kube/config" | sort -u)"
+          if echo "$exec_cmds" | rg -q '(^|/)kubelogin$'; then
+            if ! command -v kubelogin >/dev/null 2>&1; then
+              curl -fsSL "https://github.com/Azure/kubelogin/releases/latest/download/kubelogin-linux-amd64.zip" -o kubelogin.zip
+              unzip -q kubelogin.zip
+              sudo install -m 0755 bin/linux_amd64/kubelogin /usr/local/bin/kubelogin
+              rm -rf kubelogin.zip bin
+            fi
+          fi
 
       - uses: azure/setup-kubectl@v4
         with:
@@ -223,21 +231,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install auth helpers
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y jq curl unzip
-          if ! command -v aws >/dev/null 2>&1; then
-            curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o awscliv2.zip
-            unzip -q awscliv2.zip
-            sudo ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
-            rm -rf aws awscliv2.zip
-          fi
-
-      - uses: azure/use-kubelogin@v1
-        with:
-          kubelogin-version: v0.0.37
-
 
       - name: Configure kubeconfig
         env:
@@ -250,6 +243,29 @@ jobs:
           mkdir -p "$HOME/.kube"
           echo "$KUBECONFIG_B64" | base64 --decode > "$HOME/.kube/config"
           chmod 600 "$HOME/.kube/config"
+
+      - name: Install auth helpers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq curl unzip
+          if ! command -v aws >/dev/null 2>&1; then
+            curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o awscliv2.zip
+            unzip -q awscliv2.zip
+            sudo ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
+            rm -rf aws awscliv2.zip
+          fi
+
+      - name: Install kubelogin if required by kubeconfig
+        run: |
+          exec_cmds="$(jq -r '.users[]?.user.exec.command // empty' "$HOME/.kube/config" | sort -u)"
+          if echo "$exec_cmds" | rg -q '(^|/)kubelogin$'; then
+            if ! command -v kubelogin >/dev/null 2>&1; then
+              curl -fsSL "https://github.com/Azure/kubelogin/releases/latest/download/kubelogin-linux-amd64.zip" -o kubelogin.zip
+              unzip -q kubelogin.zip
+              sudo install -m 0755 bin/linux_amd64/kubelogin /usr/local/bin/kubelogin
+              rm -rf kubelogin.zip bin
+            fi
+          fi
 
       - name: Install mirrord
         run: |
