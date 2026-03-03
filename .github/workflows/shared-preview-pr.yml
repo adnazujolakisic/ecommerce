@@ -1,0 +1,314 @@
+name: Shared Preview (PR)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+concurrency:
+  group: preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+  pull-requests: write
+
+env:
+  PREVIEW_KEY: pr-${{ github.event.pull_request.number }}
+  PREVIEW_NAMESPACE: ${{ vars.PREVIEW_NAMESPACE }}
+  PREVIEW_REGISTRY: ${{ vars.PREVIEW_REGISTRY }}
+  PREVIEW_IMAGE_NAMESPACE: ${{ vars.PREVIEW_IMAGE_NAMESPACE }}
+  PREVIEW_TTL_MINUTES: ${{ vars.PREVIEW_TTL_MINUTES }}
+  PREVIEW_TIMEOUT_SECONDS: ${{ vars.PREVIEW_TIMEOUT_SECONDS }}
+
+jobs:
+  detect-changes:
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    outputs:
+      matrix_json: ${{ steps.matrix.outputs.matrix_json }}
+      has_changes: ${{ steps.matrix.outputs.has_changes }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            catalogue:
+              - "services/catalogue/**"
+            inventory:
+              - "services/inventory/**"
+            checkout:
+              - "services/checkout/**"
+            order:
+              - "services/order/**"
+            order-processor:
+              - "services/order-processor/**"
+            frontend:
+              - "frontend/**"
+            visualization-frontend:
+              - "visualization/**"
+            visualization-backend:
+              - "visualization-backend/**"
+
+      - id: matrix
+        run: |
+          matrix='{"include":[]}'
+
+          add_service() {
+            matrix="$(jq -c \
+              --arg service "$1" \
+              --arg target "$2" \
+              --arg context "$3" \
+              --arg dockerfile "$4" \
+              --arg config_file "$5" \
+              '.include += [{
+                "service": $service,
+                "target": $target,
+                "context": $context,
+                "dockerfile": $dockerfile,
+                "config_file": $config_file
+              }]' <<<"$matrix")"
+          }
+
+          [ "${{ steps.filter.outputs.catalogue }}" = "true" ] && add_service "catalogue" "deployment/catalogue" "services/catalogue" "services/catalogue/Dockerfile" ".mirrord/experiment.json"
+          [ "${{ steps.filter.outputs.inventory }}" = "true" ] && add_service "inventory" "deployment/inventory" "services/inventory" "services/inventory/Dockerfile" ".mirrord/experiment.json"
+          [ "${{ steps.filter.outputs.order }}" = "true" ] && add_service "order" "deployment/order" "services/order" "services/order/Dockerfile" ".mirrord/experiment.json"
+          [ "${{ steps.filter.outputs['visualization-backend'] }}" = "true" ] && add_service "visualization-backend" "deployment/visualization-backend" "visualization-backend" "visualization-backend/Dockerfile" ".mirrord/experiment.json"
+          [ "${{ steps.filter.outputs.checkout }}" = "true" ] && add_service "checkout" "deployment/checkout" "services/checkout" "services/checkout/Dockerfile" ".mirrord/experiment-no-db.json"
+          [ "${{ steps.filter.outputs['order-processor'] }}" = "true" ] && add_service "order-processor" "deployment/order-processor" "services/order-processor" "services/order-processor/Dockerfile" ".mirrord/experiment-no-db.json"
+          [ "${{ steps.filter.outputs.frontend }}" = "true" ] && add_service "frontend" "deployment/frontend" "frontend" "frontend/Dockerfile" ".mirrord/experiment-no-db.json"
+          [ "${{ steps.filter.outputs['visualization-frontend'] }}" = "true" ] && add_service "visualization-frontend" "deployment/visualization-frontend" "visualization" "visualization/Dockerfile" ".mirrord/experiment-no-db.json"
+
+          echo "matrix_json=$matrix" >> "$GITHUB_OUTPUT"
+          echo "has_changes=$(jq -r '.include | length > 0' <<<"$matrix")" >> "$GITHUB_OUTPUT"
+
+  preview-start:
+    if: github.event.action != 'closed' && needs.detect-changes.outputs.has_changes == 'true'
+    needs: detect-changes
+    runs-on: ubuntu-latest
+    env:
+      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix_json) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Resolve preview image
+        id: image
+        run: |
+          registry="${PREVIEW_REGISTRY:-ghcr.io}"
+          namespace="${PREVIEW_IMAGE_NAMESPACE:-${GITHUB_REPOSITORY_OWNER}/ecommerce-preview}"
+          namespace="$(echo "$namespace" | tr '[:upper:]' '[:lower:]')"
+          tag="preview-pr-${{ github.event.pull_request.number }}-${GITHUB_SHA::7}"
+          echo "registry=$registry" >> "$GITHUB_OUTPUT"
+          echo "uri=${registry}/${namespace}/${{ matrix.service }}:${tag}" >> "$GITHUB_OUTPUT"
+
+      - name: Login GHCR
+        if: steps.image.outputs.registry == 'ghcr.io'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Login custom registry
+        if: steps.image.outputs.registry != 'ghcr.io'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ steps.image.outputs.registry }}
+          username: ${{ secrets.PREVIEW_REGISTRY_USERNAME }}
+          password: ${{ secrets.PREVIEW_REGISTRY_PASSWORD }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ steps.image.outputs.uri }}
+
+      - name: Configure kubeconfig
+        env:
+          KUBECONFIG_B64: ${{ secrets.KUBECONFIG_B64 }}
+        run: |
+          if [ -z "$KUBECONFIG_B64" ]; then
+            echo "Missing required secret: KUBECONFIG_B64"
+            exit 1
+          fi
+          mkdir -p "$HOME/.kube"
+          echo "$KUBECONFIG_B64" | base64 --decode > "$HOME/.kube/config"
+          chmod 600 "$HOME/.kube/config"
+
+      - name: Install auth helpers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq curl unzip
+          if ! command -v aws >/dev/null 2>&1; then
+            curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o awscliv2.zip
+            unzip -q awscliv2.zip
+            sudo ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
+            rm -rf aws awscliv2.zip
+          fi
+
+      - name: Authenticate to Google Cloud (optional)
+        if: env.GCP_SA_KEY != ''
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ env.GCP_SA_KEY }}
+
+      - name: Set up gcloud and GKE auth plugin
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          install_components: gke-gcloud-auth-plugin
+
+      - name: Install kubelogin if required by kubeconfig
+        run: |
+          exec_cmds="$(jq -r '.users[]?.user.exec.command // empty' "$HOME/.kube/config" | sort -u)"
+          if echo "$exec_cmds" | rg -q '(^|/)kubelogin$'; then
+            if ! command -v kubelogin >/dev/null 2>&1; then
+              curl -fsSL "https://github.com/Azure/kubelogin/releases/latest/download/kubelogin-linux-amd64.zip" -o kubelogin.zip
+              unzip -q kubelogin.zip
+              sudo install -m 0755 bin/linux_amd64/kubelogin /usr/local/bin/kubelogin
+              rm -rf kubelogin.zip bin
+            fi
+          fi
+
+      - uses: azure/setup-kubectl@v4
+        with:
+          version: "latest"
+
+      - name: Normalize kubeconfig exec paths
+        run: |
+          tmp_cfg="$RUNNER_TEMP/kubeconfig.json"
+          kubectl config view --raw -o json > "$tmp_cfg"
+          while IFS= read -r cmd; do
+            [ -z "$cmd" ] && continue
+            if [[ "$cmd" = /* ]] && [ ! -x "$cmd" ]; then
+              base="$(basename "$cmd")"
+              if command -v "$base" >/dev/null 2>&1; then
+                jq --arg old "$cmd" --arg new "$base" \
+                  '(.users[]?.user.exec.command |= if . == $old then $new else . end)' \
+                  "$tmp_cfg" > "$tmp_cfg.new"
+                mv "$tmp_cfg.new" "$tmp_cfg"
+              fi
+            fi
+          done < <(jq -r '.users[]?.user.exec.command // empty' "$tmp_cfg" | sort -u)
+          cp "$tmp_cfg" "$HOME/.kube/config"
+
+      - name: Validate auth command availability
+        run: |
+          exec_cmds="$(jq -r '.users[]?.user.exec.command // empty' "$HOME/.kube/config" | sort -u)"
+          if [ -n "$exec_cmds" ]; then
+            while IFS= read -r cmd; do
+              [ -z "$cmd" ] && continue
+              if ! command -v "$cmd" >/dev/null 2>&1 && [ ! -x "$cmd" ]; then
+                echo "Missing kubeconfig auth command: $cmd"
+                exit 1
+              fi
+            done <<< "$exec_cmds"
+          fi
+          if echo "$exec_cmds" | rg -q '(^|/)gke-gcloud-auth-plugin$'; then
+            active_account="$(gcloud auth list --filter=status:ACTIVE --format='value(account)' | awk 'NR==1{print; exit}')"
+            if [ -z "$active_account" ]; then
+              echo "kubeconfig requires gke-gcloud-auth-plugin, but no active gcloud account is configured in CI."
+              echo "Set GCP_SA_KEY secret (service account JSON) or provide a kubeconfig that does not require gcloud exec auth."
+              exit 1
+            fi
+          fi
+          kubectl get ns "${PREVIEW_NAMESPACE:-metalmart}"
+
+      - name: Install mirrord
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/metalbear-co/mirrord/main/scripts/install.sh | bash
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Verify config and start preview
+        env:
+          MIRRORD_CI_API_KEY: ${{ secrets.MIRRORD_CI_API_KEY }}
+        run: |
+          namespace="${PREVIEW_NAMESPACE:-metalmart}"
+          ttl="${PREVIEW_TTL_MINUTES:-120}"
+          timeout="${PREVIEW_TIMEOUT_SECONDS:-600}"
+          mirrord verify-config "${{ matrix.config_file }}"
+          mirrord preview start \
+            --key "$PREVIEW_KEY" \
+            --target "${{ matrix.target }}" \
+            --target-namespace "$namespace" \
+            --image "${{ steps.image.outputs.uri }}" \
+            --ttl "$ttl" \
+            --timeout "$timeout" \
+            -f "${{ matrix.config_file }}"
+
+  preview-stop:
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    env:
+      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure kubeconfig
+        env:
+          KUBECONFIG_B64: ${{ secrets.KUBECONFIG_B64 }}
+        run: |
+          if [ -z "$KUBECONFIG_B64" ]; then
+            echo "Missing required secret: KUBECONFIG_B64"
+            exit 1
+          fi
+          mkdir -p "$HOME/.kube"
+          echo "$KUBECONFIG_B64" | base64 --decode > "$HOME/.kube/config"
+          chmod 600 "$HOME/.kube/config"
+
+      - name: Install auth helpers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq curl unzip
+          if ! command -v aws >/dev/null 2>&1; then
+            curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o awscliv2.zip
+            unzip -q awscliv2.zip
+            sudo ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
+            rm -rf aws awscliv2.zip
+          fi
+
+      - name: Authenticate to Google Cloud (optional)
+        if: env.GCP_SA_KEY != ''
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ env.GCP_SA_KEY }}
+
+      - name: Set up gcloud and GKE auth plugin
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          install_components: gke-gcloud-auth-plugin
+
+      - name: Install kubelogin if required by kubeconfig
+        run: |
+          exec_cmds="$(jq -r '.users[]?.user.exec.command // empty' "$HOME/.kube/config" | sort -u)"
+          if echo "$exec_cmds" | rg -q '(^|/)kubelogin$'; then
+            if ! command -v kubelogin >/dev/null 2>&1; then
+              curl -fsSL "https://github.com/Azure/kubelogin/releases/latest/download/kubelogin-linux-amd64.zip" -o kubelogin.zip
+              unzip -q kubelogin.zip
+              sudo install -m 0755 bin/linux_amd64/kubelogin /usr/local/bin/kubelogin
+              rm -rf kubelogin.zip bin
+            fi
+          fi
+
+      - name: Install mirrord
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/metalbear-co/mirrord/main/scripts/install.sh | bash
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Stop preview
+        env:
+          MIRRORD_CI_API_KEY: ${{ secrets.MIRRORD_CI_API_KEY }}
+        run: |
+          namespace="${PREVIEW_NAMESPACE:-metalmart}"
+          mirrord preview stop --key "$PREVIEW_KEY" --namespace "$namespace" || true
