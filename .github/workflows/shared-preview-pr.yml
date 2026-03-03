@@ -90,6 +90,8 @@ jobs:
     if: github.event.action != 'closed' && needs.detect-changes.outputs.has_changes == 'true'
     needs: detect-changes
     runs-on: ubuntu-latest
+    env:
+      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.detect-changes.outputs.matrix_json) }}
@@ -160,6 +162,20 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
         with:
           install_components: gke-gcloud-auth-plugin
+
+      - name: Authenticate gcloud if kubeconfig requires GKE plugin
+        run: |
+          exec_cmds="$(jq -r '.users[]?.user.exec.command // empty' "$HOME/.kube/config" | sort -u)"
+          if echo "$exec_cmds" | rg -q '(^|/)gke-gcloud-auth-plugin$'; then
+            if [ -z "$GCP_SA_KEY" ]; then
+              echo "kubeconfig requires gke-gcloud-auth-plugin auth, but GCP_SA_KEY secret is not set."
+              echo "Set GCP_SA_KEY to a service account JSON key or switch KUBECONFIG_B64 to non-gcloud auth."
+              exit 1
+            fi
+            key_file="$RUNNER_TEMP/gcp-sa.json"
+            printf '%s' "$GCP_SA_KEY" > "$key_file"
+            gcloud auth activate-service-account --key-file="$key_file"
+          fi
 
       - name: Install kubelogin if required by kubeconfig
         run: |
@@ -234,6 +250,8 @@ jobs:
   preview-stop:
     if: github.event.action == 'closed'
     runs-on: ubuntu-latest
+    env:
+      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
     steps:
       - uses: actions/checkout@v4
 
@@ -264,6 +282,20 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
         with:
           install_components: gke-gcloud-auth-plugin
+
+      - name: Authenticate gcloud if kubeconfig requires GKE plugin
+        run: |
+          exec_cmds="$(jq -r '.users[]?.user.exec.command // empty' "$HOME/.kube/config" | sort -u)"
+          if echo "$exec_cmds" | rg -q '(^|/)gke-gcloud-auth-plugin$'; then
+            if [ -z "$GCP_SA_KEY" ]; then
+              echo "kubeconfig requires gke-gcloud-auth-plugin auth, but GCP_SA_KEY secret is not set."
+              echo "Set GCP_SA_KEY to a service account JSON key or switch KUBECONFIG_B64 to non-gcloud auth."
+              exit 1
+            fi
+            key_file="$RUNNER_TEMP/gcp-sa.json"
+            printf '%s' "$GCP_SA_KEY" > "$key_file"
+            gcloud auth activate-service-account --key-file="$key_file"
+          fi
 
       - name: Install kubelogin if required by kubeconfig
         run: |
