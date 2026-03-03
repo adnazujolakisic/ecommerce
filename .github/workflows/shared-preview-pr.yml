@@ -1,0 +1,252 @@
+name: Shared Preview (PR)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+concurrency:
+  group: shared-preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  PREVIEW_KEY: pr-${{ github.event.pull_request.number }}
+  MIRRORD_CONFIG: .mirrord/experiment.json
+  PREVIEW_REGISTRY: ${{ vars.PREVIEW_REGISTRY }}
+  PREVIEW_IMAGE_NAMESPACE: ${{ vars.PREVIEW_IMAGE_NAMESPACE }}
+  PREVIEW_TTL_MINUTES: ${{ vars.PREVIEW_TTL_MINUTES }}
+  PREVIEW_TIMEOUT_SECONDS: ${{ vars.PREVIEW_TIMEOUT_SECONDS }}
+
+jobs:
+  detect-changes:
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    outputs:
+      changed_services: ${{ steps.changed.outputs.changed_services }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Detect changed services
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            catalogue:
+              - "services/catalogue/**"
+            inventory:
+              - "services/inventory/**"
+            checkout:
+              - "services/checkout/**"
+            order:
+              - "services/order/**"
+            order-processor:
+              - "services/order-processor/**"
+            frontend:
+              - "frontend/**"
+            visualization-frontend:
+              - "visualization/**"
+            visualization-backend:
+              - "visualization-backend/**"
+            mirrord-config:
+              - ".mirrord/**"
+
+      - name: Build changed service list
+        id: changed
+        run: |
+          changed=()
+
+          [ "${{ steps.filter.outputs.catalogue }}" = "true" ] && changed+=("\"catalogue\"")
+          [ "${{ steps.filter.outputs.inventory }}" = "true" ] && changed+=("\"inventory\"")
+          [ "${{ steps.filter.outputs.checkout }}" = "true" ] && changed+=("\"checkout\"")
+          [ "${{ steps.filter.outputs.order }}" = "true" ] && changed+=("\"order\"")
+          [ "${{ steps.filter.outputs['order-processor'] }}" = "true" ] && changed+=("\"order-processor\"")
+          [ "${{ steps.filter.outputs.frontend }}" = "true" ] && changed+=("\"frontend\"")
+          [ "${{ steps.filter.outputs['visualization-frontend'] }}" = "true" ] && changed+=("\"visualization-frontend\"")
+          [ "${{ steps.filter.outputs['visualization-backend'] }}" = "true" ] && changed+=("\"visualization-backend\"")
+
+          if [ "${{ steps.filter.outputs['mirrord-config'] }}" = "true" ]; then
+            changed=("\"catalogue\"" "\"inventory\"" "\"checkout\"" "\"order\"" "\"order-processor\"" "\"frontend\"" "\"visualization-frontend\"" "\"visualization-backend\"")
+          fi
+
+          if [ ${#changed[@]} -eq 0 ]; then
+            json="[]"
+          else
+            json="[$(IFS=,; echo "${changed[*]}")]"
+          fi
+
+          echo "changed_services=$json" >> "$GITHUB_OUTPUT"
+          echo "Changed preview services: $json"
+
+  build-and-start-preview:
+    if: github.event.action != 'closed' && contains(needs.detect-changes.outputs.changed_services, format('"{0}"', matrix.service))
+    needs: detect-changes
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: catalogue
+            target: deployment/catalogue
+            context: services/catalogue
+            dockerfile: services/catalogue/Dockerfile
+          - service: inventory
+            target: deployment/inventory
+            context: services/inventory
+            dockerfile: services/inventory/Dockerfile
+          - service: checkout
+            target: deployment/checkout
+            context: services/checkout
+            dockerfile: services/checkout/Dockerfile
+          - service: order
+            target: deployment/order
+            context: services/order
+            dockerfile: services/order/Dockerfile
+          - service: order-processor
+            target: deployment/order-processor
+            context: services/order-processor
+            dockerfile: services/order-processor/Dockerfile
+          - service: frontend
+            target: deployment/frontend
+            context: frontend
+            dockerfile: frontend/Dockerfile
+          - service: visualization-frontend
+            target: deployment/visualization-frontend
+            context: visualization
+            dockerfile: visualization/Dockerfile
+          - service: visualization-backend
+            target: deployment/visualization-backend
+            context: visualization-backend
+            dockerfile: visualization-backend/Dockerfile
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify required cluster secret
+        env:
+          KUBECONFIG_B64: ${{ secrets.KUBECONFIG_B64 }}
+        run: |
+          if [ -z "$KUBECONFIG_B64" ]; then
+            echo "Missing required secret: KUBECONFIG_B64"
+            exit 1
+          fi
+
+      - name: Configure kubeconfig
+        env:
+          KUBECONFIG_B64: ${{ secrets.KUBECONFIG_B64 }}
+        run: |
+          mkdir -p "$HOME/.kube"
+          echo "$KUBECONFIG_B64" | base64 --decode > "$HOME/.kube/config"
+          chmod 600 "$HOME/.kube/config"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Resolve preview image URI
+        id: image
+        run: |
+          registry="${PREVIEW_REGISTRY:-ghcr.io}"
+          namespace="${PREVIEW_IMAGE_NAMESPACE:-${GITHUB_REPOSITORY_OWNER}/ecommerce-preview}"
+          namespace="$(echo "$namespace" | tr '[:upper:]' '[:lower:]')"
+          tag="pr-${{ github.event.pull_request.number }}-${GITHUB_SHA::7}"
+          image_uri="${registry}/${namespace}/${{ matrix.service }}:${tag}"
+
+          echo "registry=$registry" >> "$GITHUB_OUTPUT"
+          echo "uri=$image_uri" >> "$GITHUB_OUTPUT"
+          echo "Preview image: $image_uri"
+
+      - name: Login to GHCR
+        if: steps.image.outputs.registry == 'ghcr.io'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Verify custom registry credentials
+        if: steps.image.outputs.registry != 'ghcr.io'
+        env:
+          PREVIEW_REGISTRY_USERNAME: ${{ secrets.PREVIEW_REGISTRY_USERNAME }}
+          PREVIEW_REGISTRY_PASSWORD: ${{ secrets.PREVIEW_REGISTRY_PASSWORD }}
+        run: |
+          if [ -z "$PREVIEW_REGISTRY_USERNAME" ] || [ -z "$PREVIEW_REGISTRY_PASSWORD" ]; then
+            echo "Set PREVIEW_REGISTRY_USERNAME and PREVIEW_REGISTRY_PASSWORD secrets for custom registries."
+            exit 1
+          fi
+
+      - name: Login to custom registry
+        if: steps.image.outputs.registry != 'ghcr.io'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ steps.image.outputs.registry }}
+          username: ${{ secrets.PREVIEW_REGISTRY_USERNAME }}
+          password: ${{ secrets.PREVIEW_REGISTRY_PASSWORD }}
+
+      - name: Build and push preview image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ steps.image.outputs.uri }}
+
+      - name: Install mirrord
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/metalbear-co/mirrord/main/scripts/install.sh | bash
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Verify mirrord config
+        run: mirrord verify-config "$MIRRORD_CONFIG"
+
+      - name: Start or update preview target
+        run: |
+          ttl="${PREVIEW_TTL_MINUTES:-120}"
+          timeout="${PREVIEW_TIMEOUT_SECONDS:-600}"
+
+          mirrord preview start \
+            --key "$PREVIEW_KEY" \
+            --target "${{ matrix.target }}" \
+            --image "${{ steps.image.outputs.uri }}" \
+            --ttl "$ttl" \
+            --timeout "$timeout" \
+            -f "$MIRRORD_CONFIG"
+
+  stop-preview-on-close:
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify required cluster secret
+        env:
+          KUBECONFIG_B64: ${{ secrets.KUBECONFIG_B64 }}
+        run: |
+          if [ -z "$KUBECONFIG_B64" ]; then
+            echo "Missing required secret: KUBECONFIG_B64"
+            exit 1
+          fi
+
+      - name: Configure kubeconfig
+        env:
+          KUBECONFIG_B64: ${{ secrets.KUBECONFIG_B64 }}
+        run: |
+          mkdir -p "$HOME/.kube"
+          echo "$KUBECONFIG_B64" | base64 --decode > "$HOME/.kube/config"
+          chmod 600 "$HOME/.kube/config"
+
+      - name: Install mirrord
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/metalbear-co/mirrord/main/scripts/install.sh | bash
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Stop shared preview environment
+        run: |
+          mirrord preview stop \
+            --key "$PREVIEW_KEY" \
+            -f "$MIRRORD_CONFIG"
