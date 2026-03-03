@@ -156,6 +156,11 @@ jobs:
             rm -rf aws awscliv2.zip
           fi
 
+      - name: Set up gcloud and GKE auth plugin
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          install_components: gke-gcloud-auth-plugin
+
       - name: Install kubelogin if required by kubeconfig
         run: |
           exec_cmds="$(jq -r '.users[]?.user.exec.command // empty' "$HOME/.kube/config" | sort -u)"
@@ -254,6 +259,11 @@ jobs:
             sudo ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
             rm -rf aws awscliv2.zip
           fi
+
+      - name: Set up gcloud and GKE auth plugin
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          install_components: gke-gcloud-auth-plugin
 
       - name: Install kubelogin if required by kubeconfig
         run: |
