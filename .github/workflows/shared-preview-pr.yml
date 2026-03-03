@@ -15,6 +15,7 @@ permissions:
 env:
   PREVIEW_KEY: pr-${{ github.event.pull_request.number }}
   MIRRORD_CONFIG: .mirrord/experiment.json
+  PREVIEW_NAMESPACE: ${{ vars.PREVIEW_NAMESPACE }}
   PREVIEW_REGISTRY: ${{ vars.PREVIEW_REGISTRY }}
   PREVIEW_IMAGE_NAMESPACE: ${{ vars.PREVIEW_IMAGE_NAMESPACE }}
   PREVIEW_TTL_MINUTES: ${{ vars.PREVIEW_TTL_MINUTES }}
@@ -185,17 +186,27 @@ jobs:
         run: mirrord verify-config "${{ matrix.config_file }}"
 
       - name: Start or update preview target
+        env:
+          MIRRORD_CI_API_KEY: ${{ secrets.MIRRORD_CI_API_KEY }}
         run: |
+          namespace="${PREVIEW_NAMESPACE:-metalmart}"
           ttl="${PREVIEW_TTL_MINUTES:-120}"
           timeout="${PREVIEW_TIMEOUT_SECONDS:-600}"
 
-          mirrord preview start \
+          if ! mirrord preview start \
             --key "$PREVIEW_KEY" \
             --target "${{ matrix.target }}" \
+            --target-namespace "$namespace" \
             --image "${{ steps.image.outputs.uri }}" \
             --ttl "$ttl" \
             --timeout "$timeout" \
-            -f "${{ matrix.config_file }}"
+            -f "${{ matrix.config_file }}"; then
+            echo "Preview start failed; collecting diagnostics..."
+            mirrord operator status || true
+            mirrord preview status --key "$PREVIEW_KEY" --namespace "$namespace" || true
+            kubectl get pods -n "$namespace" | rg -i "mirrord|preview|${{ matrix.service }}" || true
+            exit 1
+          fi
 
   stop-preview-on-close:
     if: github.event.action == 'closed'
@@ -227,7 +238,11 @@ jobs:
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Stop shared preview environment
+        env:
+          MIRRORD_CI_API_KEY: ${{ secrets.MIRRORD_CI_API_KEY }}
         run: |
+          namespace="${PREVIEW_NAMESPACE:-metalmart}"
           mirrord preview stop \
             --key "$PREVIEW_KEY" \
+            --namespace "$namespace" \
             -f "$MIRRORD_CONFIG"
