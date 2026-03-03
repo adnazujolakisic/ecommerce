@@ -126,6 +126,69 @@ jobs:
           echo "$KUBECONFIG_B64" | base64 --decode > "$HOME/.kube/config"
           chmod 600 "$HOME/.kube/config"
 
+      - name: Install Kubernetes auth helpers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq curl unzip
+
+          # Azure exec auth helper often used in kubeconfig.
+          KUBELOGIN_VERSION="v0.0.37"
+          curl -fsSL "https://github.com/Azure/kubelogin/releases/download/${KUBELOGIN_VERSION}/kubelogin-linux-amd64.zip" -o kubelogin.zip
+          unzip -q kubelogin.zip
+          sudo mv bin/linux_amd64/kubelogin /usr/local/bin/kubelogin
+          rm -rf kubelogin.zip bin
+
+          # AWS exec auth helper.
+          curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o awscliv2.zip
+          unzip -q awscliv2.zip
+          sudo ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
+          rm -rf aws awscliv2.zip
+
+      - name: Install gcloud and GKE auth plugin (optional)
+        if: ${{ secrets.GCP_SA_KEY != '' }}
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up gcloud (optional)
+        if: ${{ secrets.GCP_SA_KEY != '' }}
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Install gke-gcloud-auth-plugin (optional)
+        if: ${{ secrets.GCP_SA_KEY != '' }}
+        run: gcloud components install gke-gcloud-auth-plugin --quiet
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: "latest"
+
+      - name: Validate cluster auth command availability
+        run: |
+          exec_cmds="$(jq -r '.users[]?.user.exec.command // empty' "$HOME/.kube/config" | sort -u)"
+          if [ -z "$exec_cmds" ]; then
+            echo "No exec auth command found in kubeconfig (token/cert auth likely in use)."
+          else
+            echo "Kubeconfig exec commands:"
+            echo "$exec_cmds"
+            while IFS= read -r cmd; do
+              [ -z "$cmd" ] && continue
+              if command -v "$cmd" >/dev/null 2>&1; then
+                echo "Found auth command: $cmd"
+              elif [ -x "$cmd" ]; then
+                echo "Found auth command by absolute path: $cmd"
+              else
+                echo "Missing kubeconfig auth command: $cmd"
+                exit 1
+              fi
+            done <<< "$exec_cmds"
+          fi
+
+      - name: Validate kubectl access before preview
+        run: |
+          kubectl version --client
+          kubectl get ns "${PREVIEW_NAMESPACE:-metalmart}"
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -231,6 +294,36 @@ jobs:
           mkdir -p "$HOME/.kube"
           echo "$KUBECONFIG_B64" | base64 --decode > "$HOME/.kube/config"
           chmod 600 "$HOME/.kube/config"
+
+      - name: Install Kubernetes auth helpers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq curl unzip
+
+          KUBELOGIN_VERSION="v0.0.37"
+          curl -fsSL "https://github.com/Azure/kubelogin/releases/download/${KUBELOGIN_VERSION}/kubelogin-linux-amd64.zip" -o kubelogin.zip
+          unzip -q kubelogin.zip
+          sudo mv bin/linux_amd64/kubelogin /usr/local/bin/kubelogin
+          rm -rf kubelogin.zip bin
+
+          curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o awscliv2.zip
+          unzip -q awscliv2.zip
+          sudo ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
+          rm -rf aws awscliv2.zip
+
+      - name: Install gcloud and GKE auth plugin (optional)
+        if: ${{ secrets.GCP_SA_KEY != '' }}
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up gcloud (optional)
+        if: ${{ secrets.GCP_SA_KEY != '' }}
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Install gke-gcloud-auth-plugin (optional)
+        if: ${{ secrets.GCP_SA_KEY != '' }}
+        run: gcloud components install gke-gcloud-auth-plugin --quiet
 
       - name: Install mirrord
         run: |
