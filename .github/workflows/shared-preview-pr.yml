@@ -53,9 +53,6 @@ jobs:
               - "visualization/**"
             visualization-backend:
               - "visualization-backend/**"
-            mirrord-config:
-              - ".mirrord/**"
-              - ".github/workflows/shared-preview-pr.yml"
 
       - id: matrix
         run: |
@@ -77,25 +74,14 @@ jobs:
               }]' <<<"$matrix")"
           }
 
-          if [ "${{ steps.filter.outputs['mirrord-config'] }}" = "true" ]; then
-            add_service "catalogue" "deployment/catalogue" "services/catalogue" "services/catalogue/Dockerfile" ".mirrord/experiment.json"
-            add_service "inventory" "deployment/inventory" "services/inventory" "services/inventory/Dockerfile" ".mirrord/experiment.json"
-            add_service "order" "deployment/order" "services/order" "services/order/Dockerfile" ".mirrord/experiment.json"
-            add_service "visualization-backend" "deployment/visualization-backend" "visualization-backend" "visualization-backend/Dockerfile" ".mirrord/experiment.json"
-            add_service "checkout" "deployment/checkout" "services/checkout" "services/checkout/Dockerfile" ".mirrord/experiment-no-db.json"
-            add_service "order-processor" "deployment/order-processor" "services/order-processor" "services/order-processor/Dockerfile" ".mirrord/experiment-no-db.json"
-            add_service "frontend" "deployment/frontend" "frontend" "frontend/Dockerfile" ".mirrord/experiment-no-db.json"
-            add_service "visualization-frontend" "deployment/visualization-frontend" "visualization" "visualization/Dockerfile" ".mirrord/experiment-no-db.json"
-          else
-            [ "${{ steps.filter.outputs.catalogue }}" = "true" ] && add_service "catalogue" "deployment/catalogue" "services/catalogue" "services/catalogue/Dockerfile" ".mirrord/experiment.json"
-            [ "${{ steps.filter.outputs.inventory }}" = "true" ] && add_service "inventory" "deployment/inventory" "services/inventory" "services/inventory/Dockerfile" ".mirrord/experiment.json"
-            [ "${{ steps.filter.outputs.order }}" = "true" ] && add_service "order" "deployment/order" "services/order" "services/order/Dockerfile" ".mirrord/experiment.json"
-            [ "${{ steps.filter.outputs['visualization-backend'] }}" = "true" ] && add_service "visualization-backend" "deployment/visualization-backend" "visualization-backend" "visualization-backend/Dockerfile" ".mirrord/experiment.json"
-            [ "${{ steps.filter.outputs.checkout }}" = "true" ] && add_service "checkout" "deployment/checkout" "services/checkout" "services/checkout/Dockerfile" ".mirrord/experiment-no-db.json"
-            [ "${{ steps.filter.outputs['order-processor'] }}" = "true" ] && add_service "order-processor" "deployment/order-processor" "services/order-processor" "services/order-processor/Dockerfile" ".mirrord/experiment-no-db.json"
-            [ "${{ steps.filter.outputs.frontend }}" = "true" ] && add_service "frontend" "deployment/frontend" "frontend" "frontend/Dockerfile" ".mirrord/experiment-no-db.json"
-            [ "${{ steps.filter.outputs['visualization-frontend'] }}" = "true" ] && add_service "visualization-frontend" "deployment/visualization-frontend" "visualization" "visualization/Dockerfile" ".mirrord/experiment-no-db.json"
-          fi
+          [ "${{ steps.filter.outputs.catalogue }}" = "true" ] && add_service "catalogue" "deployment/catalogue" "services/catalogue" "services/catalogue/Dockerfile" ".mirrord/experiment.json"
+          [ "${{ steps.filter.outputs.inventory }}" = "true" ] && add_service "inventory" "deployment/inventory" "services/inventory" "services/inventory/Dockerfile" ".mirrord/experiment.json"
+          [ "${{ steps.filter.outputs.order }}" = "true" ] && add_service "order" "deployment/order" "services/order" "services/order/Dockerfile" ".mirrord/experiment.json"
+          [ "${{ steps.filter.outputs['visualization-backend'] }}" = "true" ] && add_service "visualization-backend" "deployment/visualization-backend" "visualization-backend" "visualization-backend/Dockerfile" ".mirrord/experiment.json"
+          [ "${{ steps.filter.outputs.checkout }}" = "true" ] && add_service "checkout" "deployment/checkout" "services/checkout" "services/checkout/Dockerfile" ".mirrord/experiment-no-db.json"
+          [ "${{ steps.filter.outputs['order-processor'] }}" = "true" ] && add_service "order-processor" "deployment/order-processor" "services/order-processor" "services/order-processor/Dockerfile" ".mirrord/experiment-no-db.json"
+          [ "${{ steps.filter.outputs.frontend }}" = "true" ] && add_service "frontend" "deployment/frontend" "frontend" "frontend/Dockerfile" ".mirrord/experiment-no-db.json"
+          [ "${{ steps.filter.outputs['visualization-frontend'] }}" = "true" ] && add_service "visualization-frontend" "deployment/visualization-frontend" "visualization" "visualization/Dockerfile" ".mirrord/experiment-no-db.json"
 
           echo "matrix_json=$matrix" >> "$GITHUB_OUTPUT"
           echo "has_changes=$(jq -r '.include | length > 0' <<<"$matrix")" >> "$GITHUB_OUTPUT"
@@ -171,6 +157,8 @@ jobs:
           fi
 
       - uses: azure/use-kubelogin@v1
+        with:
+          kubelogin-version: v0.0.37
 
       - uses: azure/setup-kubectl@v4
         with:
@@ -235,6 +223,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install auth helpers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq curl unzip
+          if ! command -v aws >/dev/null 2>&1; then
+            curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o awscliv2.zip
+            unzip -q awscliv2.zip
+            sudo ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
+            rm -rf aws awscliv2.zip
+          fi
+
+      - uses: azure/use-kubelogin@v1
+        with:
+          kubelogin-version: v0.0.37
+
 
       - name: Configure kubeconfig
         env:
