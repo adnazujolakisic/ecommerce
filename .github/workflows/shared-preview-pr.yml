@@ -131,7 +131,15 @@ jobs:
       - name: Install Kubernetes auth helpers
         run: |
           sudo apt-get update
-          sudo apt-get install -y jq curl unzip awscli
+          sudo apt-get install -y jq curl unzip
+
+          # AWS exec auth helper for kubeconfig auth plugins.
+          if ! command -v aws >/dev/null 2>&1; then
+            curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o awscliv2.zip
+            unzip -q awscliv2.zip
+            sudo ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
+            rm -rf aws awscliv2.zip
+          fi
 
       - name: Install kubelogin (Azure auth helper)
         uses: azure/use-kubelogin@v1
@@ -313,7 +321,14 @@ jobs:
       - name: Install Kubernetes auth helpers
         run: |
           sudo apt-get update
-          sudo apt-get install -y jq curl unzip awscli
+          sudo apt-get install -y jq curl unzip
+
+          if ! command -v aws >/dev/null 2>&1; then
+            curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o awscliv2.zip
+            unzip -q awscliv2.zip
+            sudo ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
+            rm -rf aws awscliv2.zip
+          fi
 
       - name: Install kubelogin (Azure auth helper)
         uses: azure/use-kubelogin@v1
