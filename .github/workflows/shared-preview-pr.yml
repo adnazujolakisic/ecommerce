@@ -131,20 +131,10 @@ jobs:
       - name: Install Kubernetes auth helpers
         run: |
           sudo apt-get update
-          sudo apt-get install -y jq curl unzip
+          sudo apt-get install -y jq curl unzip awscli
 
-          # Azure exec auth helper often used in kubeconfig.
-          KUBELOGIN_VERSION="v0.0.37"
-          curl -fsSL "https://github.com/Azure/kubelogin/releases/download/${KUBELOGIN_VERSION}/kubelogin-linux-amd64.zip" -o kubelogin.zip
-          unzip -q kubelogin.zip
-          sudo mv bin/linux_amd64/kubelogin /usr/local/bin/kubelogin
-          rm -rf kubelogin.zip bin
-
-          # AWS exec auth helper.
-          curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o awscliv2.zip
-          unzip -q awscliv2.zip
-          sudo ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
-          rm -rf aws awscliv2.zip
+      - name: Install kubelogin (Azure auth helper)
+        uses: azure/use-kubelogin@v1
 
       - name: Install gcloud and GKE auth plugin (optional)
         if: env.GCP_SA_KEY != ''
@@ -323,18 +313,10 @@ jobs:
       - name: Install Kubernetes auth helpers
         run: |
           sudo apt-get update
-          sudo apt-get install -y jq curl unzip
+          sudo apt-get install -y jq curl unzip awscli
 
-          KUBELOGIN_VERSION="v0.0.37"
-          curl -fsSL "https://github.com/Azure/kubelogin/releases/download/${KUBELOGIN_VERSION}/kubelogin-linux-amd64.zip" -o kubelogin.zip
-          unzip -q kubelogin.zip
-          sudo mv bin/linux_amd64/kubelogin /usr/local/bin/kubelogin
-          rm -rf kubelogin.zip bin
-
-          curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o awscliv2.zip
-          unzip -q awscliv2.zip
-          sudo ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
-          rm -rf aws awscliv2.zip
+      - name: Install kubelogin (Azure auth helper)
+        uses: azure/use-kubelogin@v1
 
       - name: Install gcloud and GKE auth plugin (optional)
         if: env.GCP_SA_KEY != ''
