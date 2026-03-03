@@ -158,24 +158,16 @@ jobs:
             rm -rf aws awscliv2.zip
           fi
 
+      - name: Authenticate to Google Cloud (optional)
+        if: env.GCP_SA_KEY != ''
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ env.GCP_SA_KEY }}
+
       - name: Set up gcloud and GKE auth plugin
         uses: google-github-actions/setup-gcloud@v2
         with:
           install_components: gke-gcloud-auth-plugin
-
-      - name: Authenticate gcloud if kubeconfig requires GKE plugin
-        run: |
-          exec_cmds="$(jq -r '.users[]?.user.exec.command // empty' "$HOME/.kube/config" | sort -u)"
-          if echo "$exec_cmds" | rg -q '(^|/)gke-gcloud-auth-plugin$'; then
-            if [ -z "$GCP_SA_KEY" ]; then
-              echo "kubeconfig requires gke-gcloud-auth-plugin auth, but GCP_SA_KEY secret is not set."
-              echo "Set GCP_SA_KEY to a service account JSON key or switch KUBECONFIG_B64 to non-gcloud auth."
-              exit 1
-            fi
-            key_file="$RUNNER_TEMP/gcp-sa.json"
-            printf '%s' "$GCP_SA_KEY" > "$key_file"
-            gcloud auth activate-service-account --key-file="$key_file"
-          fi
 
       - name: Install kubelogin if required by kubeconfig
         run: |
@@ -222,6 +214,14 @@ jobs:
                 exit 1
               fi
             done <<< "$exec_cmds"
+          fi
+          if echo "$exec_cmds" | rg -q '(^|/)gke-gcloud-auth-plugin$'; then
+            active_account="$(gcloud auth list --filter=status:ACTIVE --format='value(account)' | awk 'NR==1{print; exit}')"
+            if [ -z "$active_account" ]; then
+              echo "kubeconfig requires gke-gcloud-auth-plugin, but no active gcloud account is configured in CI."
+              echo "Set GCP_SA_KEY secret (service account JSON) or provide a kubeconfig that does not require gcloud exec auth."
+              exit 1
+            fi
           fi
           kubectl get ns "${PREVIEW_NAMESPACE:-metalmart}"
 
@@ -278,24 +278,16 @@ jobs:
             rm -rf aws awscliv2.zip
           fi
 
+      - name: Authenticate to Google Cloud (optional)
+        if: env.GCP_SA_KEY != ''
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ env.GCP_SA_KEY }}
+
       - name: Set up gcloud and GKE auth plugin
         uses: google-github-actions/setup-gcloud@v2
         with:
           install_components: gke-gcloud-auth-plugin
-
-      - name: Authenticate gcloud if kubeconfig requires GKE plugin
-        run: |
-          exec_cmds="$(jq -r '.users[]?.user.exec.command // empty' "$HOME/.kube/config" | sort -u)"
-          if echo "$exec_cmds" | rg -q '(^|/)gke-gcloud-auth-plugin$'; then
-            if [ -z "$GCP_SA_KEY" ]; then
-              echo "kubeconfig requires gke-gcloud-auth-plugin auth, but GCP_SA_KEY secret is not set."
-              echo "Set GCP_SA_KEY to a service account JSON key or switch KUBECONFIG_B64 to non-gcloud auth."
-              exit 1
-            fi
-            key_file="$RUNNER_TEMP/gcp-sa.json"
-            printf '%s' "$GCP_SA_KEY" > "$key_file"
-            gcloud auth activate-service-account --key-file="$key_file"
-          fi
 
       - name: Install kubelogin if required by kubeconfig
         run: |
