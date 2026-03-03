@@ -163,6 +163,53 @@ jobs:
         with:
           version: "latest"
 
+      - name: Normalize kubeconfig exec command paths
+        run: |
+          tmp_cfg="$RUNNER_TEMP/kubeconfig.json"
+          kubectl config view --raw -o json > "$tmp_cfg"
+
+          while IFS= read -r cmd; do
+            [ -z "$cmd" ] && continue
+            if [[ "$cmd" = /* ]] && [ ! -x "$cmd" ]; then
+              base="$(basename "$cmd")"
+              if command -v "$base" >/dev/null 2>&1; then
+                echo "Rewriting missing absolute auth command: $cmd -> $base"
+                jq --arg old "$cmd" --arg new "$base" \
+                  '(.users[]?.user.exec.command |= if . == $old then $new else . end)' \
+                  "$tmp_cfg" > "$tmp_cfg.new"
+                mv "$tmp_cfg.new" "$tmp_cfg"
+              fi
+            fi
+          done < <(jq -r '.users[]?.user.exec.command // empty' "$tmp_cfg" | sort -u)
+
+          cp "$tmp_cfg" "$HOME/.kube/config"
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: "latest"
+
+      - name: Normalize kubeconfig exec command paths
+        run: |
+          tmp_cfg="$RUNNER_TEMP/kubeconfig.json"
+          kubectl config view --raw -o json > "$tmp_cfg"
+
+          while IFS= read -r cmd; do
+            [ -z "$cmd" ] && continue
+            if [[ "$cmd" = /* ]] && [ ! -x "$cmd" ]; then
+              base="$(basename "$cmd")"
+              if command -v "$base" >/dev/null 2>&1; then
+                echo "Rewriting missing absolute auth command: $cmd -> $base"
+                jq --arg old "$cmd" --arg new "$base" \
+                  '(.users[]?.user.exec.command |= if . == $old then $new else . end)' \
+                  "$tmp_cfg" > "$tmp_cfg.new"
+                mv "$tmp_cfg.new" "$tmp_cfg"
+              fi
+            fi
+          done < <(jq -r '.users[]?.user.exec.command // empty' "$tmp_cfg" | sort -u)
+
+          cp "$tmp_cfg" "$HOME/.kube/config"
+
       - name: Validate cluster auth command availability
         run: |
           exec_cmds="$(jq -r '.users[]?.user.exec.command // empty' "$HOME/.kube/config" | sort -u)"
