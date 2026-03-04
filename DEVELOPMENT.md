@@ -113,8 +113,10 @@ I deploy infrastructure before apps so they're ready:
 # Create namespace
 kubectl apply -f k8s/base/namespace.yaml
 
-# Deploy secrets
-kubectl apply -f k8s/base/infrastructure/secrets.yaml
+# Deploy secrets (local-only file, not committed)
+cp k8s/base/infrastructure/secrets.example.yaml k8s/base/infrastructure/secrets.yaml.local
+# edit secrets.yaml.local with your credentials first
+kubectl apply -f k8s/base/infrastructure/secrets.yaml.local
 
 # Deploy PostgreSQL
 kubectl apply -f k8s/base/infrastructure/postgres.yaml
@@ -360,7 +362,7 @@ metalmart/
 │   │   ├── infrastructure/
 │   │   │   ├── postgres.yaml
 │   │   │   ├── kafka.yaml
-│   │   │   └── secrets.yaml
+│   │   │   └── secrets.example.yaml
 │   │   ├── catalogue/
 │   │   ├── inventory/
 │   │   ├── checkout/
@@ -383,7 +385,7 @@ metalmart/
 
 ## Secrets
 
-### K8s Secrets (k8s/base/infrastructure/secrets.yaml)
+### K8s Secrets (k8s/base/infrastructure/secrets.yaml.local)
 - `db-secrets` - PostgreSQL connection strings
 
 ### Environment Variables

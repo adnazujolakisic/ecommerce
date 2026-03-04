@@ -63,6 +63,8 @@ temp/
 *.kubeconfig
 kubeconfig
 secrets.yaml.local
+k8s/base/infrastructure/secrets.yaml
+k8s/base/infrastructure/secrets.yaml.local
 
 # Mirrord (keep config, ignore local state)
 .mirrord/*.log

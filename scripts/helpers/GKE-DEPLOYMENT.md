@@ -74,7 +74,13 @@ sed -i.bak "s/PROJECT_ID/$GCP_PROJECT_ID/g" k8s/overlays/gke/kustomization.yaml
 ### 4. Deploy Infrastructure First
 ```bash
 kubectl apply -f k8s/base/namespace.yaml
-kubectl apply -f k8s/base/infrastructure/secrets.yaml
+kubectl create secret generic db-secrets \
+  -n metalmart \
+  --from-literal=postgres-password="$DB_POSTGRES_PASSWORD" \
+  --from-literal=catalogue-url="$DB_CATALOGUE_URL" \
+  --from-literal=inventory-url="$DB_INVENTORY_URL" \
+  --from-literal=orders-url="$DB_ORDERS_URL" \
+  --dry-run=client -o yaml | kubectl apply -f -
 kubectl apply -f k8s/base/infrastructure/postgres.yaml
 kubectl apply -f k8s/base/infrastructure/kafka.yaml
 

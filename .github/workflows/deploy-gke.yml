@@ -186,9 +186,24 @@ jobs:
 
       - name: Deploy infrastructure
         if: needs.detect-changes.outputs.k8s == 'true' || github.event_name == 'workflow_dispatch'
+        env:
+          DB_POSTGRES_PASSWORD: ${{ secrets.DB_POSTGRES_PASSWORD }}
+          DB_CATALOGUE_URL: ${{ secrets.DB_CATALOGUE_URL }}
+          DB_INVENTORY_URL: ${{ secrets.DB_INVENTORY_URL }}
+          DB_ORDERS_URL: ${{ secrets.DB_ORDERS_URL }}
         run: |
           kubectl apply -f k8s/base/namespace.yaml
-          kubectl apply -f k8s/base/infrastructure/secrets.yaml
+          if [ -z "$DB_POSTGRES_PASSWORD" ] || [ -z "$DB_CATALOGUE_URL" ] || [ -z "$DB_INVENTORY_URL" ] || [ -z "$DB_ORDERS_URL" ]; then
+            echo "❌ Missing required GitHub secrets: DB_POSTGRES_PASSWORD, DB_CATALOGUE_URL, DB_INVENTORY_URL, DB_ORDERS_URL"
+            exit 1
+          fi
+          kubectl create secret generic db-secrets \
+            -n metalmart \
+            --from-literal=postgres-password="$DB_POSTGRES_PASSWORD" \
+            --from-literal=catalogue-url="$DB_CATALOGUE_URL" \
+            --from-literal=inventory-url="$DB_INVENTORY_URL" \
+            --from-literal=orders-url="$DB_ORDERS_URL" \
+            --dry-run=client -o yaml | kubectl apply -f -
           
           # Apply postgres resources - handle PVC immutability
           if kubectl get pvc postgres-pvc -n metalmart &>/dev/null; then

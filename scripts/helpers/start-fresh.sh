@@ -115,7 +115,13 @@ done
 # 4. Deploy infrastructure first
 echo "4. Deploying infrastructure (secrets, postgres, kafka)..."
 kubectl apply -f k8s/base/namespace.yaml
-kubectl apply -f k8s/base/infrastructure/secrets.yaml
+SECRET_FILE="k8s/base/infrastructure/secrets.yaml.local"
+if [ ! -f "$SECRET_FILE" ]; then
+  echo "   ❌ Missing $SECRET_FILE"
+  echo "   Copy k8s/base/infrastructure/secrets.example.yaml to $SECRET_FILE and fill real values."
+  exit 1
+fi
+kubectl apply -f "$SECRET_FILE"
 
 # Apply postgres - handle PVC immutability (can't change storageClassName on existing PVC)
 OUTPUT=$(kubectl apply -f k8s/base/infrastructure/postgres.yaml 2>&1) || {

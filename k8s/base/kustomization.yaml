@@ -6,7 +6,6 @@ namespace: metalmart
 resources:
   - namespace.yaml
   # Infrastructure
-  - infrastructure/secrets.yaml
   - infrastructure/postgres.yaml
   - infrastructure/kafka.yaml
   # Services
