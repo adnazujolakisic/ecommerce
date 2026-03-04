@@ -1,5 +1,5 @@
 #!/bin/bash
-# Setup mirrord Operator monitoring: Loki + Promtail + Grafana + Operator Dashboard
+# Setup mirrord Operator monitoring: Loki + Promtail
 #
 # Prerequisites:
 #   - kubectl, helm, minikube (or other k8s cluster)
@@ -13,9 +13,7 @@
 # Override with: MIRRORD_MONITORING_ALLOW_REMOTE=1 ./scripts/setup-mirrord-monitoring.sh
 #
 # After setup:
-#   - Grafana: minikube service grafana -n monitoring  (or kubectl port-forward)
-#   - Import dashboard: Grafana → Dashboards → Import → upload k8s/monitoring/mirrord-operator-dashboard.json
-#   - Select "grafanacloud-logs" datasource → choose your Loki (named "Loki" or "grafanacloud-logs")
+#   - Query Loki directly (port-forward loki-gateway service)
 
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -32,7 +30,7 @@ if [[ "${MIRRORD_MONITORING_ALLOW_REMOTE}" != "1" ]]; then
   if echo "$CONTEXT" | grep -qE 'gke_|eks\.|aks\.|arn:aws:|azure'; then
     echo "ERROR: Detected remote cluster (context: $CONTEXT)"
     echo ""
-    echo "Monitoring (Loki, Promtail, Grafana) is for local development only."
+    echo "Monitoring (Loki, Promtail) is for local development only."
     echo "It will NOT be deployed to remote clusters."
     echo ""
     echo "To force deployment anyway: MIRRORD_MONITORING_ALLOW_REMOTE=1 $0 $*"
@@ -81,21 +79,7 @@ else
   helm install promtail grafana/promtail -n $NAMESPACE -f "$MONITORING_DIR/promtail-values.yaml"
 fi
 
-# 6. Install Grafana
-echo ""
-echo ">>> Installing Grafana..."
-GRAFANA_VALUES="$MONITORING_DIR/grafana-values.yaml"
-if [[ ! -f "$GRAFANA_VALUES" ]]; then
-  echo "   Warning: $GRAFANA_VALUES not found. Create it from k8s/monitoring/README.md"
-  exit 1
-fi
-if helm list -n $NAMESPACE | grep -q '^grafana\t'; then
-  helm upgrade grafana grafana/grafana -n $NAMESPACE -f "$GRAFANA_VALUES"
-else
-  helm install grafana grafana/grafana -n $NAMESPACE -f "$GRAFANA_VALUES"
-fi
-
-# 7. Upgrade mirrord operator with jsonLog (if license provided)
+# 6. Upgrade mirrord operator with jsonLog (if license provided)
 if [[ -n "$LICENSE_KEY" ]]; then
   echo ""
   echo ">>> Upgrading mirrord operator with JSON logging..."
@@ -115,20 +99,15 @@ else
   echo "   helm upgrade mirrord-operator mirrord/mirrord-operator --set license.key=<KEY> --set operator.jsonLog=true -n mirrord"
 fi
 
-# 8. Summary
+# 7. Summary
 echo ""
 echo "=== Setup Complete ==="
 echo ""
-echo "Access Grafana:"
-echo "  minikube service grafana -n $NAMESPACE"
-echo "  (or: kubectl port-forward svc/grafana 3000:80 -n $NAMESPACE)"
+echo "Access Loki gateway:"
+echo "  kubectl port-forward svc/loki-gateway 3100:80 -n $NAMESPACE"
 echo ""
-echo "Default login: admin / admin"
-echo ""
-echo "Import mirrord Operator Dashboard:"
-echo "  1. Grafana → Dashboards → New → Import"
-echo "  2. Upload: $MONITORING_DIR/mirrord-operator-dashboard.json"
-echo "  3. Select datasource: Loki (grafanacloud-logs)"
+echo "Quick query example (from another terminal):"
+echo "  curl -G 'http://localhost:3100/loki/api/v1/query' --data-urlencode 'query={namespace=\"mirrord\"}'"
 echo ""
 echo "Ensure mirrord operator has jsonLog enabled (Team/Enterprise plan):"
 echo "  helm upgrade mirrord-operator mirrord/mirrord-operator --set license.key=<KEY> --set operator.jsonLog=true -n mirrord"

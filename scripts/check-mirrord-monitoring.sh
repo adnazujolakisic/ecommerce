@@ -1,5 +1,5 @@
 #!/bin/bash
-# Debug why mirrord Grafana dashboard shows "No data"
+# Debug mirrord Loki/Promtail pipeline
 # Run this, then fix any issues and optionally: helm upgrade promtail grafana/promtail -n monitoring -f k8s/monitoring/promtail-values.yaml
 set -e
 
@@ -26,7 +26,7 @@ echo "5. Loki services:"
 kubectl get svc -n monitoring | grep -E "loki|NAME" || true
 echo ""
 
-echo "6. Test: Run a mirrord session to generate logs, then in Grafana Explore try:"
+echo "6. Test: Run a mirrord session to generate logs, then query Loki:"
 echo "   {namespace=\"mirrord\"}"
 echo "   {namespace=\"mirrord\", service_name=\"mirrord-operator\"}"
 echo ""

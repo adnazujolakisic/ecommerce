@@ -1,6 +1,6 @@
 # Mirrord Operator Monitoring
 
-Loki + Promtail + Grafana setup for monitoring the mirrord operator with the official [mirrord Operator Dashboard](https://github.com/metalbear-co/docs/blob/main/docs/managing-mirrord/assets/Mirrord_grafana_Operator_Dashboard.json).
+Loki + Promtail setup for monitoring mirrord operator logs.
 
 ## Prerequisites
 
@@ -35,28 +35,22 @@ Or with license as argument:
 |-----------|---------|
 | **Loki** | Log aggregation (monolithic, single replica, MinIO storage) |
 | **Promtail** | Collects pod logs, adds `service_name=mirrord-operator` for mirrord pods |
-| **Grafana** | Visualization with pre-provisioned Loki datasource |
 
 ## After Setup
 
-### 1. Access Grafana
+### 1. Access Loki API
 
 ```bash
-# Minikube
-minikube service grafana -n monitoring
-
-# Or port-forward
-kubectl port-forward svc/grafana 3000:80 -n monitoring
+# Port-forward Loki gateway
+kubectl port-forward svc/loki-gateway 3100:80 -n monitoring
 ```
 
-Open http://localhost:3000 — login: **admin** / **admin**
+### 2. Run Query Against Loki
 
-### 2. Import mirrord Operator Dashboard
-
-1. **Dashboards** → **New** → **Import**
-2. **Upload JSON file** → select `k8s/monitoring/mirrord-operator-dashboard.json`
-3. Select datasource: **Loki (grafanacloud-logs)**
-4. Click **Import**
+```bash
+curl -G 'http://localhost:3100/loki/api/v1/query' \
+  --data-urlencode 'query={namespace="mirrord"}'
+```
 
 ### 3. Enable JSON Logging on Mirrord Operator
 
@@ -77,13 +71,6 @@ Restart the operator pod if it was already running:
 kubectl rollout restart deployment/mirrord-operator -n mirrord
 ```
 
-## Dashboard Panels
-
-- **Client Usage** — Session count by client
-- **User Count** — Unique mirrord users
-- **Target Sessions** — Target name, namespace, type
-- **Events** — Session start/end, port steal, etc.
-
 Logs are filtered by `{namespace="mirrord", service_name="mirrord-operator"}`.
 
 ## Manual Installation
@@ -103,14 +90,11 @@ helm install loki grafana/loki -n monitoring -f k8s/monitoring/loki-values.yaml
 
 # Install Promtail (after Loki is ready)
 helm install promtail grafana/promtail -n monitoring -f k8s/monitoring/promtail-values.yaml
-
-# Install Grafana
-helm install grafana grafana/grafana -n monitoring -f k8s/monitoring/grafana-values.yaml
 ```
 
 ## Troubleshooting
 
-### No data in dashboard
+### No data in Loki queries
 
 1. **Operator JSON logging enabled?**
    ```bash
@@ -123,17 +107,12 @@ helm install grafana grafana/grafana -n monitoring -f k8s/monitoring/grafana-val
    ```
 
 3. **Check Loki has logs:**
-   - Grafana → Explore → select Loki
-   - Query: `{namespace="mirrord"}`
+   - Query Loki API with `{namespace="mirrord"}`
    - If empty, check Promtail can reach Loki and mirrord namespace pods
-
-### Wrong datasource on import
-
-When importing the dashboard, ensure you select the **Loki** datasource with UID `grafanacloud-logs` (pre-provisioned in `grafana-values.yaml`).
 
 ## Uninstall
 
 ```bash
-helm uninstall grafana promtail loki -n monitoring
+helm uninstall promtail loki -n monitoring
 kubectl delete namespace monitoring
 ```

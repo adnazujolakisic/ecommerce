@@ -3,6 +3,9 @@ node_modules/
 vendor/
 *.mod.bak
 
+# Security audit output
+SECURITY-POSTURE.md
+
 # Build artifacts
 bin/
 dist/
