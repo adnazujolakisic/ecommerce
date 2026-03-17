@@ -111,28 +111,26 @@ jobs:
             --timeout "$PREVIEW_TIMEOUT_SECONDS" \
             -f .mirrord/preview-frontend.json
 
-      - name: Comment PR with test link and header
+      - name: Comment PR with preview link and header
         uses: actions/github-script@v7
         with:
           script: |
             const key = `pr-${context.payload.pull_request.number}`;
-            const url = process.env.FRONTEND_URL || 'https://YOUR-INGRESS-IP.nip.io';
-            const body = `## Preview ready
+            const url = (process.env.FRONTEND_URL || 'https://34-102-166-235.nip.io').replace(/\/$/, '');
+            const body = `## mirrord Preview Environment - MetalMart
 
-            **Test your PR preview:**
+            A preview environment is running for this PR (frontend).
 
             | | |
             |---|---|
-            | **URL** | ${url} |
-            | **Header name** | \`x-traffic\` |
-            | **Header value** | \`${key}\` |
+            | **Preview URL** | [${url}](${url}) |
+            | **Header** | \`x-traffic: ${key}\` |
 
-            **How to test:**
-            - **curl:** \`curl -H "x-traffic: ${key}" ${url}\`
-            - **Browser:** Use a header-modifier extension (e.g. ModHeader) to add \`x-traffic: ${key}\`
-            - **Chrome DevTools:** Network tab → Right-click request → "Edit and Resend" → Add header
+            **How to send traffic to the preview:**
+            - Use the [mirrord Browser Extension](https://github.com/metalbear-co/mirrord#browser-extension) and set the header for this URL
+            - Or use curl: \`curl -H "x-traffic: ${key}" ${url}\`
 
-            Preview will expire in ${process.env.PREVIEW_TTL_MINUTES || 120} minutes.
+            Preview is stopped when the PR is merged or closed.
             `;
             github.rest.issues.createComment({
               issue_number: context.issue.number,
@@ -142,7 +140,6 @@ jobs:
             });
         env:
           FRONTEND_URL: ${{ env.FRONTEND_URL }}
-          PREVIEW_TTL_MINUTES: ${{ env.PREVIEW_TTL_MINUTES }}
 
   preview-stop:
     if: github.event.action == 'closed'
