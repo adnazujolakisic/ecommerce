@@ -5,7 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
+	"os"
+	"strings"
 
 	"github.com/metalbear-co/metalmart/services/checkout/models"
 )
@@ -25,6 +28,9 @@ func NewHandler(inventoryURL, orderURL string) *Handler {
 }
 
 func (h *Handler) ProcessCheckout(w http.ResponseWriter, r *http.Request) {
+	log.Printf("ProcessCheckout request -> inventory=%s order=%s", h.inventoryURL, h.orderURL)
+	h.logDemoProof(r)
+
 	var req models.CheckoutRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondError(w, "Invalid request body", http.StatusBadRequest)
@@ -79,6 +85,9 @@ func (h *Handler) ProcessCheckout(w http.ResponseWriter, r *http.Request) {
 		respondError(w, fmt.Sprintf("Failed to create order: %v", err), http.StatusInternalServerError)
 		return
 	}
+	if h.isDemoRequest(r) {
+		log.Printf("[demo] db proof created_order_number=%s", orderResp.OrderNumber)
+	}
 
 	// Step 3: Confirm inventory reservation
 	if err := h.confirmInventory(reserveResp.ReservationID); err != nil {
@@ -97,6 +106,9 @@ func (h *Handler) ProcessCheckout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) ValidateCart(w http.ResponseWriter, r *http.Request) {
+	log.Printf("ValidateCart request -> inventory=%s", h.inventoryURL)
+	h.logDemoProof(r)
+
 	var req models.ValidateCartRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondError(w, "Invalid request body", http.StatusBadRequest)
@@ -228,4 +240,34 @@ func respondError(w http.ResponseWriter, message string, status int) {
 		Success: false,
 		Message: message,
 	})
+}
+
+func (h *Handler) logDemoProof(r *http.Request) {
+	if !h.isDemoRequest(r) {
+		return
+	}
+
+	// Remote env proof: these values are injected from the target workload.
+	log.Printf("[demo] env INVENTORY_SERVICE_URL=%s", os.Getenv("INVENTORY_SERVICE_URL"))
+	log.Printf("[demo] env ORDER_SERVICE_URL=%s", os.Getenv("ORDER_SERVICE_URL"))
+	log.Printf("[demo] env PORT=%s", os.Getenv("PORT"))
+
+	// File access proof: with fs=read, this resolves from the remote pod filesystem.
+	nsBytes, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
+	if err != nil {
+		log.Printf("[demo] file read failed: %v", err)
+	} else {
+		log.Printf("[demo] file namespace=%s", strings.TrimSpace(string(nsBytes)))
+	}
+
+}
+
+func (h *Handler) isDemoRequest(r *http.Request) bool {
+	// Preferred demo trigger: W3C baggage header (industry standard propagation).
+	baggage := strings.ToLower(strings.TrimSpace(r.Header.Get("baggage")))
+	if strings.Contains(baggage, "mirrord=remote-env") {
+		return true
+	}
+	// Backward-compatible fallback for older demo requests.
+	return strings.EqualFold(strings.TrimSpace(r.Header.Get("x-demo")), "remote-env")
 }

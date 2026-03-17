@@ -8,7 +8,7 @@
   },
   "feature":{
      "preview":{
-        "image":"YOUR_REGISTRY/metalmart/frontend:preview",
+        "image":"us-docker.pkg.dev/mirrord-test-474620/metalmart/frontend:preview",
         "ttl_mins":60
      },
      "network":{
