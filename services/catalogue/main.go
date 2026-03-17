@@ -57,7 +57,7 @@ func main() {
 	// CORS middleware
 	handler := corsMiddleware(r)
 
-	log.Printf("Catalogue service starting on port %s", port)
+	log.Printf("Catalogue service ready on port %s", port)
 	if err := http.ListenAndServe(":"+port, handler); err != nil {
 		log.Fatalf("Server failed: %v", err)
 	}

@@ -42,6 +42,17 @@ function App() {
   return (
     <BrowserRouter>
       <div style={{ minHeight: '100vh' }}>
+        <div style={{
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white',
+          textAlign: 'center',
+          padding: '1rem 0',
+          fontSize: '1.5rem',
+          fontWeight: 'bold',
+          letterSpacing: '0.05em'
+        }}>
+          This is a shared PR preview environment
+        </div>
         <Header cartCount={cart.reduce((sum, i) => sum + i.quantity, 0)} />
         <main>
           <Routes>

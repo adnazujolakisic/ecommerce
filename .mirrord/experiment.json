@@ -1,0 +1,44 @@
+{
+    "target": {
+      "namespace": "metalmart",
+      "path": {
+        "deployment": "catalogue"
+      }
+    },
+    "feature": {
+      "preview": {
+        "ttl_mins": 120,
+        "creation_timeout_secs": 600
+      },
+      "network": {
+        "incoming": {
+          "mode": "steal",
+          "http_filter": {
+            "header_filter": "X-PG-Tenant: {{ key }}"
+          }
+        },
+        "outgoing": {
+          "ignore_localhost": true
+        }
+      },
+      "db_branches": [
+        {
+          "id": "preview-db-branch",
+          "type": "pg",
+          "connection": {
+            "url": {
+              "type": "env",
+              "variable": "DATABASE_URL"
+            }
+          },
+          "copy": {
+            "mode": "schema"
+          },
+          "ttl_secs": 900,
+          "creation_timeout_secs": 60
+        }
+      ]
+    },
+    "operator": true
+  }
+  
