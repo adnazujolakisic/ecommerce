@@ -219,4 +219,4 @@ jobs:
 
       - name: Stop preview
         run: |
-          mirrord preview stop --key "pr-${{ github.event.pull_request.number }}" --namespace metalmart || true
+          mirrord preview stop --key "pr-${{ github.event.pull_request.number }}" -n metalmart || true
