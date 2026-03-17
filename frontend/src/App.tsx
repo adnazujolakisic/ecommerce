@@ -42,6 +42,9 @@ function App() {
   return (
     <BrowserRouter>
       <div style={{ minHeight: '100vh' }}>
+        <div className="preview-banner">
+          This is a test banner for preview environment. Create new branch for that. Open pull request. Do not merge.
+        </div>
         <Header cartCount={cart.reduce((sum, i) => sum + i.quantity, 0)} />
         <main>
           <Routes>
