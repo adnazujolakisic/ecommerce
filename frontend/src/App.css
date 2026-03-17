@@ -4,6 +4,16 @@
   padding: 0;
 }
 
+/* Preview environment banner */
+.preview-banner {
+  background: #2563eb;
+  color: white;
+  text-align: center;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
 body {
   font-family: Poppins, system-ui, sans-serif;
   background: hsl(var(--background));

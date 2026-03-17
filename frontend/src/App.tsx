@@ -42,6 +42,9 @@ function App() {
   return (
     <BrowserRouter>
       <div style={{ minHeight: '100vh' }}>
+        <div className="preview-banner">
+          Preview environment — You are viewing a PR preview. Changes here are not yet in production.
+        </div>
         <Header cartCount={cart.reduce((sum, i) => sum + i.quantity, 0)} />
         <main>
           <Routes>
