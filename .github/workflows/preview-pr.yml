@@ -98,8 +98,6 @@ jobs:
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Start preview
-        env:
-          MIRRORD_CI_API_KEY: ${{ secrets.MIRRORD_CI_API_KEY }}
         run: |
           mirrord verify-config .mirrord/preview-frontend.json
           mirrord preview start \
@@ -177,7 +175,5 @@ jobs:
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Stop preview
-        env:
-          MIRRORD_CI_API_KEY: ${{ secrets.MIRRORD_CI_API_KEY }}
         run: |
           mirrord preview stop --key "pr-${{ github.event.pull_request.number }}" --namespace metalmart || true
