@@ -1,0 +1,186 @@
+name: Shared Preview (PR)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    paths:
+      - 'frontend/**'
+
+concurrency:
+  group: preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+  pull-requests: write
+
+env:
+  PREVIEW_KEY: pr-${{ github.event.pull_request.number }}
+  PREVIEW_NAMESPACE: metalmart
+  PREVIEW_TTL_MINUTES: "120"
+  PREVIEW_TIMEOUT_SECONDS: "600"
+  # Set in repo vars: FRONTEND_URL (e.g. https://34-102-166-235.nip.io)
+  FRONTEND_URL: ${{ vars.FRONTEND_URL || 'https://34-102-166-235.nip.io' }}
+
+jobs:
+  preview-start:
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    env:
+      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Resolve preview image
+        id: image
+        run: |
+          registry="us-docker.pkg.dev"
+          project="mirrord-test-474620"
+          repo="metalmart"
+          tag="preview-pr-${{ github.event.pull_request.number }}-${GITHUB_SHA::7}"
+          uri="${registry}/${project}/${repo}/frontend:${tag}"
+          echo "uri=${uri}" >> "$GITHUB_OUTPUT"
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ env.GCP_SA_KEY }}
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker us-docker.pkg.dev --quiet
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: frontend
+          file: frontend/Dockerfile
+          push: true
+          tags: ${{ steps.image.outputs.uri }}
+
+      - name: Configure kubeconfig
+        env:
+          KUBECONFIG_B64: ${{ secrets.KUBECONFIG_B64 }}
+        run: |
+          if [ -z "$KUBECONFIG_B64" ]; then
+            echo "::error::Missing required secret: KUBECONFIG_B64"
+            exit 1
+          fi
+          mkdir -p "$HOME/.kube"
+          echo "$KUBECONFIG_B64" | base64 --decode > "$HOME/.kube/config"
+          chmod 600 "$HOME/.kube/config"
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq curl
+
+      - name: Authenticate to Google Cloud (kubeconfig)
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ env.GCP_SA_KEY }}
+
+      - name: Set up gcloud and GKE auth plugin
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          install_components: gke-gcloud-auth-plugin
+
+      - uses: azure/setup-kubectl@v4
+        with:
+          version: "latest"
+
+      - name: Install mirrord
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/metalbear-co/mirrord/main/scripts/install.sh | bash
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Start preview
+        env:
+          MIRRORD_CI_API_KEY: ${{ secrets.MIRRORD_CI_API_KEY }}
+        run: |
+          mirrord verify-config .mirrord/preview-frontend.json
+          mirrord preview start \
+            --key "$PREVIEW_KEY" \
+            --target deployment/frontend \
+            --target-namespace "$PREVIEW_NAMESPACE" \
+            --image "${{ steps.image.outputs.uri }}" \
+            --ttl "$PREVIEW_TTL_MINUTES" \
+            --timeout "$PREVIEW_TIMEOUT_SECONDS" \
+            -f .mirrord/preview-frontend.json
+
+      - name: Comment PR with test link and header
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const key = `pr-${context.payload.pull_request.number}`;
+            const url = process.env.FRONTEND_URL || 'https://YOUR-INGRESS-IP.nip.io';
+            const body = `## Preview ready
+
+            **Test your PR preview:**
+
+            | | |
+            |---|---|
+            | **URL** | ${url} |
+            | **Header name** | \`x-traffic\` |
+            | **Header value** | \`${key}\` |
+
+            **How to test:**
+            - **curl:** \`curl -H "x-traffic: ${key}" ${url}\`
+            - **Browser:** Use a header-modifier extension (e.g. ModHeader) to add \`x-traffic: ${key}\`
+            - **Chrome DevTools:** Network tab → Right-click request → "Edit and Resend" → Add header
+
+            Preview will expire in ${process.env.PREVIEW_TTL_MINUTES || 120} minutes.
+            `;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body
+            });
+        env:
+          FRONTEND_URL: ${{ env.FRONTEND_URL }}
+          PREVIEW_TTL_MINUTES: ${{ env.PREVIEW_TTL_MINUTES }}
+
+  preview-stop:
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    env:
+      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure kubeconfig
+        env:
+          KUBECONFIG_B64: ${{ secrets.KUBECONFIG_B64 }}
+        run: |
+          if [ -z "$KUBECONFIG_B64" ]; then
+            echo "Missing KUBECONFIG_B64, skipping preview stop"
+            exit 0
+          fi
+          mkdir -p "$HOME/.kube"
+          echo "$KUBECONFIG_B64" | base64 --decode > "$HOME/.kube/config"
+          chmod 600 "$HOME/.kube/config"
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ env.GCP_SA_KEY }}
+
+      - name: Set up gcloud and GKE auth plugin
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          install_components: gke-gcloud-auth-plugin
+
+      - name: Install mirrord
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/metalbear-co/mirrord/main/scripts/install.sh | bash
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Stop preview
+        env:
+          MIRRORD_CI_API_KEY: ${{ secrets.MIRRORD_CI_API_KEY }}
+        run: |
+          mirrord preview stop --key "pr-${{ github.event.pull_request.number }}" --namespace metalmart || true
